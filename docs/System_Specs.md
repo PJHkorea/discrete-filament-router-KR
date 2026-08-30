@@ -6,7 +6,8 @@ This document defines the production-grade hardware dimensioning parameters and 
 
 ## 1. Physical Hardware Topology & Multi-Layered Architecture (Topological Field Design & Multi-Tiered Protection Direction)
 
-The physical plant maps a 3D volumetric space into a strict **1D Linear Trajectory Loop** to enable deterministic packet streaming and minimize boundary intervention chattering.
+The physical plant maps a 3D volumetric space into a strict 1D Linear Trajectory Loop to detail the structural specifications of the hardware containment matrix and establish a balancing framework for Section 2's software core.
+
 
 
 
