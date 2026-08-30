@@ -23,20 +23,19 @@ This document provides a highly optimized comparative matrix between the legacy 
 
 ---
 
-## Architectural Breakthrough Highlights
+##  Architectural Breakthrough Highlights (vs Legacy Tokamak)
 
-### 1. 3-Tier Hardware-Fused Control Loop (Sub-10ns Boundary)
-To bridge the gap between abstract neural model inference and physical quantum/plasma coherence limits, the control architecture completely isolates high-latency software layers from the active physical window:
-*   **Layer 1 (Hardware Edge):** Expunges dynamic hardware division blocks. Utilizes localized **64-element distributed RAM Reciprocal LUT arrays** to trigger branchless machine-code multiplexing (MUX), locking error detection and signal attenuation within a **strict sub-10ns execution window**.
-*   **Inter-Layer Bridge (0ns Pointer Bypass):** Intercepts raw memory base addresses over **PCIe Unified/BAR Memory spaces** using strict `__cuda_array_interface__ v3` descriptors. This bypasses host-to-device copy traps and framework allocation bottlenecks, achieving a literal **0ns data transport overhead** to the processing engine.
-*   **Layer 2 (AI Core Kernel):** Incorporates an outermost `jax.lax.stop_gradient` boundary loop to permanently isolate the tensor backpropagation chain on broken grid sectors, preventing localized physical faults from causing non-local parameter cross-contamination.
+Based on the detailed hardware/software specifications defined in `System_Specs.md`, this section outlines how the Dynamic Fusion Reactor (DFR) fundamentally resolves and breaks through the critical limitations of legacy 3D Tokamaks.
 
-### 2. Dual-Layered Sandwich Orchestration & AI Hallucination Dissipation
-The control hierarchy mimics biological neural control—filtering high-dimensional probabilistic reasoning through deterministic homeostatic primitives:
-*   **Decoupled Topography:** The probabilistic **Sub-Brain (1st-Gen Causal LLM)** functions exclusively as an offloaded high-dimensional knowledge catalog, remaining completely cached during baseline operations. Real-time physical execution is entirely governed by the deterministic **Main-Brain (2nd-Gen Homeostasis Kernel)**.
-*   **Mathematical Guardrails:** Sudden statistical fluctuations or phase jumps emitted by the Sub-Brain are intercepted by a register-level **Neumann-Burgers' Viscous Dissipation pipeline**. Trajectory anomalies with high geometric curvature ($\kappa$) push the quantum tunneling transmission coefficient toward zero ($T \rightarrow 0.0$), forcing numerical hallucinations to safely dissipate as non-destructive algebraic thermal friction into the liquid lithium boundary layer.
+### 1.  Physical Spatiotemporal Isolation (sub-10ns Control Loop)
+* **Legacy Limitation:** Legacy 3D Tokamaks rely on heavy, centralized feedback computations operating at the millisecond (ms) scale to prevent the non-linear collapse of massive plasma volumes. This introduces severe latency bottlenecks.
+* **DFR Breakthrough:** By reducing the problem complexity into a 1D linear track, the DFR establishes a **0ns zero-copy pipeline** powered by `__cuda_array_interface__ v3`. At the lowest silicon layer (L1), it executes floating-point-free **64-element RAM reciprocal LUT** operations. This achieves **preemptive magnetic field control at a sub-10ns scale**, neutralizing instabilities before the plasma packets can deform.
 
-### 3. Closed-Loop Vapor Shielding & Virtual Lattice Surgery
-System-level homeostasis is preserved through a tightly coupled hardware-software protection matrix:
-*   **Self-Regulating Evaporative Cushion:** When high-frequency plasma perturbations impact the 최전방 Layer 3 boundary surface, the adjacent 3mm-5mm Liquid Lithium-Lead (Li-Pb) fluid cushion layer spontaneously undergoes localized phase transformation. This builds a **protective Vapor Shielding 단열막**, which is subsequently re-condensed via the Layer 2 GlidCop (구리-알루미늄 분산 강화 합금) heat sink loop to form a continuous, non-sacrificial protection circuit.
-*   **Asynchronous Virtual Amputation:** Under live operational traffic, the Layer 3 Global Orchestrator runs a passive, non-blocking `asyncio` event loop maintaining a 0% CPU compute baseline during system parity. Upon logging a `-99.0f` hardware fracture token via PCIe DMA interrupts, it executes **Virtual Lattice Surgery** to alter the global geometry mask (`active_lattice_mask`). This permanently routes plasma scheduling around the isolated degraded sector axis alone, ensuring the rest of the 1D linear trajectory loop maintains continuous power generation without system-wide shutdown.
+### 2.  Control Instability Cancellation (Dual-Layered Homeostasis)
+* **Legacy Limitation:** Conventional control algorithms and standard AI models suffer from systemic divergence when encountering unpredictable plasma turbulence or data discontinuities (hallucinations).
+* **DFR Breakthrough:** Mimicking biological mechanisms, the DFR architecture completely decouples the probabilistic **LLM (Sub-Brain)** from the deterministic **Homeostasis Kernel (Main Brain)**. Any numerical hallucinations from the AI (such as sudden `NaN` jumps) are immediately filtered through **Neumann-Burgers and Schrödinger barrier equations**, safely dissipating data anomalies as raw physical thermal friction within the liquid lithium layer.
+
+### 3.  Autonomous Recovery & Isolation (Vapor Shielding & Lattice Surgery)
+* **Legacy Limitation:** Localized thermal runaway or cracks on a Tokamak’s first-wall trigger a catastrophic full-plasma disruption, resulting in an immediate and total system shutdown.
+* **DFR Breakthrough:** When plasma approaches the inner wall, liquid Lithium-Lead (Li-Pb) spontaneously vaporizes to form a **self-healing Vapor Shield**. If a specific sector fails entirely and breaches the sensor threshold (`1e6f`), a failure marker (`-99.0f`) is injected at the bare-metal layer without branching. The upper orchestrator then instantly executes an **asynchronous lattice surgery (`active_lattice_mask` swap)**, hot-swapping and isolating the compromised axis in real time to maintain uninterrupted reactor operation.
+
