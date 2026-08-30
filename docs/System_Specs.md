@@ -63,6 +63,21 @@ graph TD
 * **Layer 2 (Thermodynamic Ingestion Core):** High-density **GlidCop (Cu-Al)** heat sink tubing. Drives compound thermal extraction grids with a targeted **60% - 70% hybrid energy recovery efficiency**.
 * **Layer 1 (Periphery Electromagnetic Execution Zone):** Hermetically isolated, radiation-hardened segment housing high-speed **GaN/SiC power semiconductor switching nodes**. Directly coupled to branchless **CUDA PTX** execution lines to drive immediate **sub-10ns** magnetic correction.
 
+
+### 1.3 Comprehensive 6-Layer Physical Boundary Specifications
+
+The continuous 1D trajectory loop is engineered through a 6-tier sandwich architecture. This design shifts the containment burden from massive external magnetic confinement to a self-regulating, boundary-driven thermodynamic and fluidic balancing framework.
+
+| Layer Name | Density / Margin Spec | Primary Material Component | Detailed Physical Mechanics & Functional Role |
+| :--- | :--- | :--- | :--- |
+| **Deepest Core Axis** | Diameter: 1mm - 2mm<br>(Scalable to 0.5mm - 1.5mm Ultra-Fine Filament) | D-T Plasma Train (Deuterium-Tritium) | Runs a slow drift trajectory at 5–10 m/s under 100M K, maintaining a strict 1D linear alignment. Replaces explosive bulk expansion with a **ball-lightning-inspired discrete packet combustion paradigm governed by electrostatic surface tension**. Exploits the spontaneous rebound repulsion (vapor thrust) of the fluid cushion layer to self-compress plasma density ($n$) on the central axis, achieving 'Lawson Criterion' parity without colossal external magnetics. |
+| **Vacuum Buffer Zone** | Radius: 50cm Margin | Ultra-High Vacuum (UHV) State | Secures a significant compute/actuation latency buffer before localized plasma kinks or high-frequency micro-instabilities can bridge the gap to the physical first-wall. Eliminates conductive and convective heat transfer via the vacuum blanket, thermally insulating the 1-2mm core filament to sustain its ultra-high core temperature independent of spatial transit distances (Dewar flask effect). |
+| **Layer 3<br>(First-Wall Surface)** | 60% - 65% Variable Porosity Lattice Topology | Tungsten-Copper Functionally Graded Material (W-Cu FGM) | Diverts incoming high-energy plasma particle impacts into low-angle diagonal sliding vectors (shearing vectors) rather than orthogonal collisions. Functions as a non-sacrificial diagnostic mesh to intercept 1st-tier electromagnetic shift metrics. |
+| **Fluid Cushion Layer** | Mean Thickness: 3.0mm - 5.0mm Steady-State Flowing Film | Liquid Lithium-Lead (Li-Pb) Eutectic Alloy | Captures fast neutrons to achieve internal fuel tritium breeding while providing a self-healing thermal buffer. Under localized extreme heat flux, the lithium spontaneously vaporizes to trigger a **Vapor Shielding thermal insulation cushion**. This multi-modal vapor front diffuses radiative energy isotropically and exerts a self-regulating, non-linear electromagnetic/fluidic repelling cushion that intensifies as the plasma packet approaches.<br><br>$$\text{[Continuous Radiation Ingestion]} \rightarrow \text{[Spontaneous Li Evaporation]} \rightarrow \text{[Vapor Shielding Cushion Formation]} \rightarrow \text{[Condensation via Layer 2]} \rightarrow \text{[Fluidic Loop Recirculation]}$$ |
+| **Layer 2<br>(Intermediate Layer)** | $\ge$ 95% Ultra-High Density Extruded Conduit Array | Copper-Alumina Dispersion-Strengthened Alloy (GlidCop) | Maximizes thermal conductivity to instantly harvest high-flux thermal energy (Heat Sink Action) and routes it directly to external gas turbine generation cycles. When vaporized lithium molecules encounter the GlidCop cooling boundary, they undergo high-velocity phase condensation, turning back into liquid form and falling into the lower collector to complete the **Continuous Lithium Capture Circuit**. |
+| **Layer 1<br>(Peripheral Backing)** | 95% - 99% Radiation-Hardened Hermetic Shielding | Ceramic Grid Matrix + **GaN/SiC Power Semiconductors** | Forms a pristine, zero-neutron-leakage zone for low-level embedded hardware. Houses the distributed processing architecture to execute **single-cycle deterministic, branchless MUX anticipatory magnetic pulse execution** via hardwired CUDA PTX instruction blocks. |
+
+
 ---
 
 ## 2. Low-Level Software Core & 0ns Ingress Kernel
