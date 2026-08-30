@@ -83,29 +83,29 @@ The continuous 1D trajectory loop is engineered through a 6-tier sandwich archit
 
 ---
 
-## 2. Multi-Layered Software 
+### 2. Multi-Layered Software 
 
-# 🧠 Level 4 (Cognitive Inference & Structural Immunity): Generative LLM & Homeostasis Kernel
+###  Level 4 (Cognitive Inference & Structural Immunity): Generative LLM & Homeostasis Kernel
 * **Structural Positioning:** A macro command tower that integrates and manages multiple independent sub-silicon/orchestration cells at a global level, mathematically dissipating AI divergence.
 * **Macro Inference:** Infers macro-level systemic states based on pipeline-wide traffic data to generate guidelines and templates for spatiotemporal discrete packet trajectory driving.
 * **Immunity Purification:** Neutralizes statistical discontinuities (numerical hallucinations) and NaN jumps in LLMs by forcing them through Neumann-Burgers and Schrödinger barrier equations.
 * **Memory Optimization:** Freezes the spatial complexity of the immunity module to $VRAM\ O(1)$ using `stop_gradient`.
 * **Hybrid Coupling:** Combines a special-purpose LLM (excluded from this repository) with an upper-level homeostasis filter kernel (only the kernel component is implemented here) via the `homeostasis-kernel` reference.
 
-# 👑 Level 3 (Global Orchestration): Asynchronous Passive Orchestrator
+###  Level 3 (Global Orchestration): Asynchronous Passive Orchestrator
 * **Structural Positioning:** An asynchronous software backbone that governs telemetry interrupts within a single control cell.
 * **Telemetry Monitoring:** Utilizes native `asyncio` non-blocking passive interrupt polling to detect fault signals propagating from peripheral rails.
 * **Lattice Surgery:** Executes immediate `active_lattice_mask` swaps and rerouting strategies to isolate faulty axes via virtual grid operations.
 * **Concurrency Efficiency:** Ensures uninterrupted, non-blocking event routing free from GIL (Global Interpreter Lock) constraints.
 * **Feedback Bridge:** Operates a continuous feedback loop and context-bridging mechanism back to the LLM layers.
 
-# 🏰 Level 2 (Hardware-Software Bridge): C++ Accelerator Bridge Conduit
+###  Level 2 (Hardware-Software Bridge): C++ Accelerator Bridge Conduit
 * **Structural Positioning:** A pure embedded data conduit linking the lowest hardware silicon periphery (Level 1) to the higher orchestration layer (Level 3) with zero communication latency.
 * **Zero-Copy Interception:** Leverages the `__cuda_array_interface__` v3 specification to execute 0ns zero-copy pointer interception directly in the PCIe BAR Shared Memory region.
 * **Bottleneck Elimination:** Eradicates Host-to-Device deep-copy bottlenecks and bypasses Python Garbage Collector (GC) intervention to achieve zero-jitter memory allocation.
 * **High-Speed Bypass:** Implements a bare-metal to JAX/XLA high-speed pointer bypass bridge protected by C++20 `[[unlikely]]` exception guards, following the `fluid-mesh-hpc` blueprint.
 
-# ⛓ Level 1 (Hardware Silicon Edge): Sub-Nanosecond Silicon Edge
+###  Level 1 (Hardware Silicon Edge): Sub-Nanosecond Silicon Edge
 * **Structural Positioning:** The lowest physical silicon edge layer that directly interfaces with streaming plasma packets.
 * **Arithmetic Elimination:** Completely removes floating-point hardware division blocks from the silicon design level.
 * **Anticipatory Actuation:** Utilizes a 64-element distributed RAM reciprocal Look-Up Table (LUT) for high-speed multiplication, executing sub-10ns hardwired anticipatory magnetic pulse injections for real-time discrete plasma segments.
