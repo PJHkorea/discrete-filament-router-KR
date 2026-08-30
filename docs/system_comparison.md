@@ -7,7 +7,7 @@
 
 ---
 
-## Technical Specification Matrix (기술 사양 매트릭스) - 대략적인 예층 및 방향성입니다.
+## Technical Specification Matrix (기술 사양 매트릭스) - 대략적인 예측 및 방향성입니다.
 
 | Metric / Feature (지표 / 특징) | Legacy Volumetric Tokamak (70-Year Foundation) <br>(기존 입체 토카막 - 70년 기반) | Next-Gen Discrete Filament Router (DFR/FNG-V3) <br>(차세대 이산 필라멘트 라우터) |
 | :--- | :--- | :--- |
