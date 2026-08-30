@@ -23,3 +23,4 @@ This document provides a highly optimized comparative matrix between the legacy 
 
 ---
 
+💡 **See Also:** For detailed mechanical tiers and software loop implementations, refer to [System_Specs.md].
