@@ -67,4 +67,7 @@ graph TD
 ## 📂 추가 명세 
 
 * 📄 **하드웨어 사양 및 로우레벨 커널 인터페이스:** [`docs/System_Specs.md`](docs/System_Specs.md)
-* 📄 **레거시 3D 토카막 대비 DFR 아키텍처 비교 :** [`docs/system_comparison.md`](docs/system_comparison.md)
+* 📄 **레거시 3D 토카막 대비 DFR 아키텍처 비교:** [`docs/system_comparison.md`](docs/system_comparison.md)
+* 📄 **평시 정상 상태 운전 및 전자기적 중첩 규격:** [`docs/Normal_Operation_Specs.md`](docs/Normal_Operation_Specs.md)
+* 📄 **비상 대응 및 3단계 동적 디지털 플러시 규격:** [`docs/Emergency_Sequence.md`](docs/Emergency_Sequence.md)
+
