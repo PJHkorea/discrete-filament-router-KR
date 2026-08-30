@@ -33,4 +33,4 @@ DFR(FNG-V3) 시스템은 기존 3D 볼류메트릭 토카막의 거대한 비선
 ## 📂 추가 명세 
 
 * 📄 **하드웨어 사양 및 로우레벨 커널 인터페이스:** [`docs/System_Specs.md`](docs/System_Specs.md)
-* 📄 **레거시 3D 토카막 대비 DFR 아키텍처 비교 백서:** [`docs/system_comparison.md`](docs/system_comparison.md)
+* 📄 **레거시 3D 토카막 대비 DFR 아키텍처 비교 :** [`docs/system_comparison.md`](docs/system_comparison.md)
