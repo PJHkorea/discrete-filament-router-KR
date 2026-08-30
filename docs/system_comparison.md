@@ -23,19 +23,3 @@ This document provides a highly optimized comparative matrix between the legacy 
 
 ---
 
-##  Architectural Breakthrough Highlights (vs Legacy Tokamak)
-
-Based on the detailed hardware/software specifications defined in `System_Specs.md`, this section outlines how the Dynamic Fusion Reactor (DFR) fundamentally resolves and breaks through the critical limitations of legacy 3D Tokamaks.
-
-### 1.  Physical Spatiotemporal Isolation (sub-10ns Control Loop)
-* **Legacy Limitation:** Legacy 3D Tokamaks rely on heavy, centralized feedback computations operating at the millisecond (ms) scale to prevent the non-linear collapse of massive plasma volumes. This introduces severe latency bottlenecks.
-* **DFR Breakthrough:** By reducing the problem complexity into a 1D linear track, the DFR establishes a **0ns zero-copy pipeline** powered by `__cuda_array_interface__ v3`. At the lowest silicon layer (L1), it executes floating-point-free **64-element RAM reciprocal LUT** operations. This achieves **preemptive magnetic field control at a sub-10ns scale**, neutralizing instabilities before the plasma packets can deform.
-
-### 2.  Control Instability Cancellation (Dual-Layered Homeostasis)
-* **Legacy Limitation:** Conventional control algorithms and standard AI models suffer from systemic divergence when encountering unpredictable plasma turbulence or data discontinuities (hallucinations).
-* **DFR Breakthrough:** Mimicking biological mechanisms, the DFR architecture completely decouples the probabilistic **LLM (Sub-Brain)** from the deterministic **Homeostasis Kernel (Main Brain)**. Any numerical hallucinations from the AI (such as sudden `NaN` jumps) are immediately filtered through **Neumann-Burgers and Schrödinger barrier equations**, safely dissipating data anomalies as raw physical thermal friction within the liquid lithium layer.
-
-### 3.  Autonomous Recovery & Isolation (Vapor Shielding & Lattice Surgery)
-* **Legacy Limitation:** Localized thermal runaway or cracks on a Tokamak’s first-wall trigger a catastrophic full-plasma disruption, resulting in an immediate and total system shutdown.
-* **DFR Breakthrough:** When plasma approaches the inner wall, liquid Lithium-Lead (Li-Pb) spontaneously vaporizes to form a **self-healing Vapor Shield**. If a specific sector fails entirely and breaches the sensor threshold (`1e6f`), a failure marker (`-99.0f`) is injected at the bare-metal layer without branching. The upper orchestrator then instantly executes an **asynchronous lattice surgery (`active_lattice_mask` swap)**, hot-swapping and isolating the compromised axis in real time to maintain uninterrupted reactor operation.
-
