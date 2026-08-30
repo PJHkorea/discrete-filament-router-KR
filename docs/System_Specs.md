@@ -14,8 +14,8 @@ The physical plant maps a 3D volumetric space into a strict 1D Linear Trajectory
 
 
 ```mermaid
-graph TD
-    %% 스타일 정의 (가시성 극대화)
+graph TB
+    %% 스타일 정의 (가시성 및 대비 극대화)
     classDef ingress fill:#FF4D4D,stroke:#FF0000,stroke-width:2px,color:#FFFFFF,font-weight:bold;
     classDef egress fill:#2F55FF,stroke:#001FFF,stroke-width:2px,color:#FFFFFF,font-weight:bold;
     classDef packet fill:#FFD700,stroke:#B8860B,stroke-width:2px,color:#000000,font-weight:bold;
@@ -23,36 +23,34 @@ graph TD
     classDef layer2 fill:#D97706,stroke:#92400E,stroke-width:2px,color:#FFFFFF,font-weight:bold;
     classDef layer1 fill:#7C3AED,stroke:#5B21B6,stroke-width:2px,color:#FFFFFF,font-weight:bold;
 
-    %% 1D 선형 트랙 (상단 흐름) - 특수문자 화살표를 표준 '-->' 기호로 전면 수정
-    subgraph Stream ["1D Linear Trajectory Loop"]
-        direction LR
-        Ingress[Plasma Stream Ingress] --> P1["▬"] --> P2["▬"] --> P3["▬"] --> P4["▬"] --> Packets[Discrete Packets] --> Egress[Egress Hub]
-    end
-
-    %% 하드웨어 물리 계층 (하단 적층)
-    subgraph Layers ["Multi-Layered Architecture"]
+    %% 최외곽 계층: 전자기 제어존 (물리벽 관통 전자기 필드 방사 의미 부여)
+    subgraph L1 ["[Layer 1] GaN / SiC Radiation-Hardened Branchless Magnetics Execution Zone"]
         direction TB
-        L3["[Layer 3] Vacuum Margin + Self-Regulating Liquid Lithium-Lead (Li-Pb) Vapor Cushion"]
-        ---
-        L2["[Layer 2] GlidCop (Cu-Al) Hyper-Speed Dispersion-Strengthened Heat Sink Array"]
-        ---
-        L1["[Layer 1] GaN / SiC Radiation-Hardened Branchless Magnetics Execution Zone"]
+        
+        %% 중간 계층: 열 회수 냉각판
+        subgraph L2 ["[Layer 2] GlidCop (Cu-Al) Hyper-Speed Dispersion-Strengthened Heat Sink Array"]
+            direction TB
+            
+            %% 내부 계층: 리튬 보온병 장벽
+            subgraph L3 ["[Layer 3] Vacuum Margin + Self-Regulating Liquid Li-Pb Vapor Cushion (Dewar Flask Thermal Barrier)"]
+                direction LR
+                
+                %% 최중심축: 1D 선형 트랙 파이프라인
+                Ingress[Plasma Stream Ingress] --> P1["▬"] --> P2["▬"] --> P3["▬"] --> P4["▬"] --> Packets[Discrete Packets] --> Egress[Egress Hub]
+            end
+        end
     end
-
-    %% 상하 관계 연결
-    Stream --> Layers
 
     %% 클래스 적용
     class Ingress ingress;
     class Egress egress;
     class P1,P2,P3,P4,Packets packet;
-    class L3 layer3;
-    class L2 layer2;
-    class L1 layer1;
+    
+    %% 컨테이너 스타일링 (동심원 적층 가시화)
+    style L1 fill:#241A3A,stroke:#7C3AED,stroke-width:3px,stroke-dasharray: 5 5,color:#FFFFFF;
+    style L2 fill:#2C1B10,stroke:#D97706,stroke-width:2px,color:#FFFFFF;
+    style L3 fill:#0F2416,stroke:#1E7E34,stroke-width:2px,color:#FFFFFF;
 
-    %% 컨테이너 스타일
-    style Stream fill:none,stroke:#DDDDDD,stroke-width:1px,stroke-dasharray: 5 5;
-    style Layers fill:none,stroke:#DDDDDD,stroke-width:1px,stroke-dasharray: 5 5;
 ```
 
 ---
