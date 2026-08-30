@@ -1,6 +1,6 @@
 # Discrete Filament Router (DFR) - Technical System Specifications
 
-This document defines the production-grade hardware dimensioning parameters and low-level software kernel execution interfaces for the **Discrete Filament Router (DFR / FNG-V3 Framework)**. 
+What if we viewed ball lightning as a process of extremely slow dust explosion? And what if we applied that concept to plasma filament packets?
 
 ---
 
