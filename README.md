@@ -30,6 +30,39 @@ DFR(FNG-V3) 시스템은 기존 3D 볼류메트릭 토카막의 거대한 비선
 *   FPGA/ASIC 논리 패브릭 직결 및 `__builtin_memcpy` 기반 무분기 MUX 실패 토큰 사출.
 ---
 
+```mermaid
+graph TD
+    %% 전체 제어 루프 구조 정의
+    subgraph SYSTEM_LAYERS ["🎛️ 4계층 상호작용 및 항상성 제어 루프 명세"]
+        direction TB
+
+        %% Layer 4 정의
+        L4["<b>Layer 4 : 항상성 커널(거시적 관리)</b><br><font size=2>• 배관 온도/기압 실시간 모니터링 (ms 단위)<br>• 핵심 제어: 잉크젯 발사 주파수(Hz) 다이얼 조절 (출력/냉각 제어)</font>"]
+
+        %% Layer 3 정의
+        L3["<b>Layer 3 : 격자 수술 (Lattice Surgery)</b><br><font size=2>• 비선형 반발력 및 예외 처리<br>• 핵심 제어: 특정 블록 오작동 시 찰나의 마스킹(On/Off)</font>"]
+
+        %% Layer 2 정의
+        L2["<b>Layer 2 : 하드웨어 브릿지</b><br><font size=2>• 0ns 제로카피 공유 메모리 (__cuda_array_interface__)<br>• 핵심 제어: 데이터 지연 없는 실시간 전달</font>"]
+
+        %% Layer 1 정의
+        L1["<b>Layer 1 : 실리콘 에지</b><br><font size=2>• 8분할 대각 전자석 펄스 트리거 (예: sub-10ns 단위)</font>"]
+
+        %% 하향식 제어 파이프라인 연결
+        L4 -->|거시 상태 변수 전달| L3
+        L3 -->|인터럽트 및 예외 신호 라우팅| L2
+        L2 -->|sub-10ns 하드웨어 인터셉트| L1
+    end
+
+    %% 🎨 깃허브 파서 안전 규격 스타일링 (줄바꿈 분리)
+    style SYSTEM_LAYERS fill:#0d1117,stroke:#30363d,stroke-width:2px,color:#c9d1d9
+    
+    style L4 fill:#1f242c,stroke:#58a6ff,stroke-width:1px,color:#c9d1d9
+    style L3 fill:#1f242c,stroke:#ff7b72,stroke-width:1px,color:#c9d1d9
+    style L2 fill:#1f242c,stroke:#79c0ff,stroke-width:1px,color:#c9d1d9
+    style L1 fill:#221b1b,stroke:#ff7b72,stroke-width:2px,color:#ff7b72
+```
+
 ## 📂 추가 명세 
 
 * 📄 **하드웨어 사양 및 로우레벨 커널 인터페이스:** [`docs/System_Specs.md`](docs/System_Specs.md)
