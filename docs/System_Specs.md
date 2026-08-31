@@ -65,7 +65,7 @@ graph TB
 ### 1.1 경계 구조적 치수 (Boundary Structural Dimensions)
 * **코어 이송 채널 (Core Transit Channel):** 미세 다발화(Micro-bunching) 안정화에 최적화된 단일 튜브 형태의 폐쇄형 도관입니다.
 * **유효 패킷 직경 (Effective Packet Diameter):** $\varnothing$ `0.5mm – 1.5mm` 스케일의 미세 필라멘트 패킷 다발입니다.
-* **동역학적 진공 회랑 (Dynamic Vacuum Corridor):** 과도기적 운동 섭동을 완충하고 물리적인 제1벽(First-wall) 접촉을 원천 차단하기 위해 외곽으로 $\ge$ `50cm` 영역의 가둠 마진을 확보합니다.
+* **동역학적 진공 회랑 (Dynamic Vacuum Corridor):** 과도기적 운동 섭동을 완충하고 물리적인 제1벽(First-wall) 접촉을 원천 차단하기 위해 외곽으로 $\ge$ `30cm` 영역의 가둠 마진을 확보합니다.
 
 ### 1.2 다층 소재 계층 규격 (Multi-Tier Material Layer Specifications)
 * **계층 3 (전방 운동 경계면 / Layer 3):** 텅스텐-구리 경사기능소재(W-Cu FGM) 위에 `3mm-5mm` 두께로 흐르는 **액체 리튬-납(Li-Pb) 박막**입니다. 국소적인 비선형 열 스파이크를 중화하기 위해 증발식 *증기 차폐(Vapor Shielding)* 쿠션을 자가 형성합니다.
