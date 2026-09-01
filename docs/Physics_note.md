@@ -44,6 +44,7 @@
 
 ## 📊 제어 파라미터 및 시공간 매핑 메인 매트릭스 (Main Matrix)
 
+
 | 파라미터 분류 | 기호 | 설계 설정값 및 제어 공식 | 물리적/공학적 함의 |
 | :--- | :---: | :--- | :--- |
 | **축 주행 속도** | $v_z$ | **10 m/s (정상상태 고정)** | 패킷 및 자석 진행파의 기준 이송 속도 |
@@ -51,4 +52,6 @@
 | **자석 고정 클럭** | $f_{\text{magnet}}$ | $\frac{v_z}{L_{\text{pitch}}} = \mathbf{50\text{ Hz}}$ | Layer 1 반도체(GaN/SiC)의 무연산 정적 고정 리듬 |
 | **잉크젯 발사 Hz** | $f_{\text{ink}}$ | **5 kHz ~ 15 kHz (가변)** | Level 4 커널의 시스템 총출력 다이얼링 파라미터 |
 | **패킷 공간 거리** | $\Delta z_{\text{packet}}$ | $\frac{v_z}{f_{\text{ink}}} = \mathbf{2.0 \sim 0.66\text{ mm}}$ | 리튬 플라즈마 자켓 내부 패킷 간 미시적 중심 피치 |
-| **시공간 매핑 비율** | $\mathcal{R}$ | $\frac{f_{\text{ink}}}{f_{\text{magnet}}} = \mathbf{100 \sim 300}$ | 하드웨어 연산 부하 감소 |
+| **시공간 매핑 비율** | $\mathcal{R}$ | $\frac{f_{\text{ink}}}{f_{\text{magnet}}} = \mathbf{100 \sim 300}$ | 하드웨어 연산 부하 1/300 억제 효과 및 자가 가둠 완비 |
+| **정상상태 리튬 증기압** | $P_{\text{steady}}$ | **$\approx 5.17 \times 10^{-5}\text{ Torr}$** | 패킷 감속 없는 최적압 가둠 평형 및 자가 수명 증폭 |
+
