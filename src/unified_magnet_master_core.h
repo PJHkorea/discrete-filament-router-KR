@@ -92,7 +92,7 @@ static inline void unified_magnet_master_process(
     /* 4. 📌 비상 발동 시: 위치 핀(is_chamber_node) 세라믹 마킹에 따른 역할 분담 집행 */
     
     /* [분기 1] 일반 노드(0)일 때의 비상 출력 설정: 챔버 자력은 0, 직진축 최대 가속(Hz Max Up) */
-    float gen_emergency_z = 100000.0f; /* 강력한 후방 청소 펌핑 */
+    float gen_emergency_z = 1.5f; /* 강력한 후방 청소 펌핑 */
     float gen_emergency_curl = 0.0f;
 
     /* [분기 2] 챔버 노드(1)일 때의 비상 출력 설정: 직진 차단(0), 대각선 소용돌이 게이트 최대 개방 */
