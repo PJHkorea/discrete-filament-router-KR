@@ -1,13 +1,19 @@
-
 import asyncio
 from typing import Dict, List, Tuple
+
+# Level 2에서 C++ 고속 다운스트림 관로로 마감한 바이너리 컴파일 모듈 로드
+import c_accelerator_bridge_conduit 
 
 # Note: 동기식 차단 트랩(time.sleep)을 차단하기 위해 표준 'time' 라이브러리는 엄격히 제외합니다.
 # 모든 비상 사후 복구 및 스캔 루프는 비차단형 'asyncio' 비동기 루프로 구동됩니다.
 
 class DFRAperiodicPostFlushOrchestrator:
-    def __init__(self, num_sectors: int):
+    def __init__(self, num_sectors: int, sector_register_addresses: Dict[int, int] = None):
         self.num_sectors = num_sectors
+        
+        # 📌 하향식 물리 드라이버 연동: 16개 자석 섹터의 실제 PCIe BAR / 공유 메모리 주소 매핑 딕셔너리
+        # 가짜 로그 수준을 소멸시키고, C++ 단 포인터 격파 기법으로 하드웨어를 직접 제어할 기반 자산을 확보합니다.
+        self.sector_addrs = sector_register_addresses if sector_register_addresses else {}
         
         # [전역 배관 트랙 상태 테이블] 16개 독립 자석 섹터의 거시적 열역학/전자기 위상태 관리
         # "STEADY": 50Hz 평시 정속 주행 | "FLUSHING": 비상 가속 플러시 및 관성 사출 중 | "RECOVERING": 진공 흡입 중
@@ -26,10 +32,7 @@ class DFRAperiodicPostFlushOrchestrator:
         
         self.is_running = True
 
-
-
-
-             def report_magnet_interrupt_event(self, sector_id: int, marker_signal: float):
+    def report_magnet_interrupt_event(self, sector_id: int, marker_signal: float):
         # 50Hz 정속 파도타기 정상 운전 기저선: 패시브 리스닝 유지 (연산 부하 0%)
         if marker_signal == 0.0:
             return  
@@ -44,7 +47,7 @@ class DFRAperiodicPostFlushOrchestrator:
             self.execute_plant_rerouting(failed_sector_id=sector_id)
 
 
-    def execute_plant_rerouting(self, failed_sector_id: int):
+      def execute_plant_rerouting(self, failed_sector_id: int):
         if self.track_status[failed_sector_id] == "FLUSHING":
             return  # 동일 고장 신호의 중복 처리를 방지하는 가드 조건
             
@@ -56,14 +59,10 @@ class DFRAperiodicPostFlushOrchestrator:
         self.evacuated_defect_sectors.append(failed_sector_id)
         
         print(f" ➔ ⛔ [Lattice Map Synced] Sector [{failed_sector_id}] 전력망 가상 격자 격리 및 우회 궤도 동기화 완료.")
-
-        # [Post-Facto DMA Sync] 챔버 직전부 노드가 직진을 끊고 베셀 소용돌이 게이트를 개방한 최종 위상 보관
         print(f" ➔ ⛓ [Lattice State Ingested] 고장 구역 직전 Y자 분기점 직선 챔버 관성 사출 게이트 개방 상태 아카이빙 완료.")
-        print(f"📊 [HUMAN HMI] 발전소 관제 대시보드 경보: [Sector {failed_sector_id} 자율 소산 밸브 오픈 & 비상 세척 시퀀스 가동 중]")
+        print(f"📊 [HUMAN HMI] 관제 대시보드 경보: [Sector {failed_sector_id} 자율 소산 밸브 오픈 & 비상 세척 시퀀스 가동 중]")
 
-
-
-          async def run_orchestrator_loop(self):
+    async def run_orchestrator_loop(self):
         print("=== [DFR ORCHESTRATOR] 비동기 사후 플러시 및 복구 모니터링 루프 가동 ===")
         
         # [하드웨어 소산 시뮬레이션] 가동 후 0.5초 시점에 7번 자석 섹터에서 절대 단선 결함(-99.0f) 발생 가정
@@ -86,9 +85,19 @@ class DFRAperiodicPostFlushOrchestrator:
             print(f"➔ 🌬️ [Layer 3 배관 정비] Sector [7] 흡입 진공 펌프 가동 -> 10⁻⁵ Torr 초고진공 및 500°C 평형 안정화 정착.")
             await asyncio.sleep(0.5)
             
-            # [소프트 리셋 및 재점화 명령 전파]
-            # 배관 청정이 완벽히 완료되었으므로, 가속 록인되어 있던 Layer 1 자석 칩셋들에게 
-            # 평시 50Hz 정속 파도타기 복귀 시그널(0.0)을 하향식 전파하여 무중단 연속 발전을 가동합니다.
+            # ---------------------------------------------------------------------
+            # 📌 융합 대개조 핵심: 하향식 물리 드라이버 결속을 통한 실전 재점화(Re-ignition) 집행
+            # ---------------------------------------------------------------------
+            # 단순히 글자만 출력하던 가짜 추상화 루프를 소멸시키고, 
+            # 7번 자석 섹터의 실제 레지스터 물리 주소가 매핑 테이블에 존재하는지 확인 후 다이렉트 인젝션을 가합니다.
+            if 7 in self.sector_addrs and self.sector_addrs[7] is not None:
+                # C++ 베어메탈 브릿지를 역방향으로 격파하여 하부 칩의 fail_counter와 is_emergency_on을 0으로 포맷팅!
+                c_accelerator_bridge_conduit.trigger_hardware_reignition_conduit(self.sector_addrs[7])
+                print(f"➔ 🔌 [하향식 물리 드라이버 가동] Sector [7] 하부 실리콘 레지스터(주소: {hex(self.sector_addrs[7])}) 하드웨어 원자적 포맷팅 완료.")
+            else:
+                print(f"➔ ⚠️ [하향식 물리 드라이버 경고] Sector [7]의 유효한 물리 레지스터 주소가 바인딩되지 않아 에뮬레이션 복구 모드로 우회합니다.")
+
+            # 소프트 리셋 명령 전파 마감 및 기저 전력망 가동 상태 복귀
             self.track_status[7] = "STEADY"
             self.active_lattice_mask[7] = True  # 가상 격자 수술 마스크 복구
             print(f"➔ 🔄 [Layer 3 재점화] Sector [7] 통신 마스크 복구 -> 평시 50Hz 정속 주행 궤도로 소프트 리셋(Re-ignition) 집행 완료.")
@@ -106,14 +115,24 @@ if __name__ == "__main__":
     print("=== [DFR PLANT ORCHESTRATOR] 1D 선형 트랙 Layer 3 소프트웨어 중추 기동 ===")
     
     # 📌 [실전 발전 플랜트 통합 명세]
-    # 기저 부하 발전소 가동 시 파이썬 JIT(Just-In-Time) 컴파일로 인한 초단 지연 지터를 차단하기 위해,
+    # 기저 부하 발전소 가동 시 파이썬 JIT 컴파일로 인한 초단 지연 지터를 차단하기 위해,
     # 초기 기동 직후 최상위 항상성 커널의 'trigger_system_warmup'을 연동하여 제어 파이프라인을 사전 동결합니다.
     print("[Layer 3 Boot] 하부 실리콘 에지(Layer 1) 및 가속기 브릿지(Layer 2) 데이터 관로 연결 성공.")
     print("[Layer 3 Boot] JIT 지연 오차 소멸을 위한 전 구간 16개 자석 섹터 '사전 웜업(trigger_system_warmup)' 집행...")
     print("[Layer 3 Boot] 다층 레이어 간 비동기 소산 인터페이스 동기화 완료. 무병목 가동 대기.\n")
     
-    # 전 구간 1D 선형 트랙 루프를 구성하는 16 독립 자석 섹터 전용 오케스트레이터 인스턴스화 마감
-    orchestrator = DFRAperiodicPostFlushOrchestrator(num_sectors=16)
+    # 📌 하향식 드라이버 실전 테스트를 위한 16개 섹터 가상 하드웨어 레지스터 주소 맵 생성 (Memory Mocking)
+    # 실제 환경에서는 PCIe BAR 공간이나 고성능 메모리 맵(mmap) 주소가 이 테이블로 인입됩니다.
+    mock_base_address = 0x7FFF00000000
+    mock_sector_address_table = {
+        s: mock_base_address + (s * 32) for s in range(16)
+    }
+    
+    # 전 구간 1D 선형 트랙 루프를 구성하는 16개 독립 자석 섹터의 실제 물리 주소 맵을 바인딩하여 인스턴스화
+    orchestrator = DFRAperiodicPostFlushOrchestrator(
+        num_sectors=16, 
+        sector_register_addresses=mock_sector_address_table
+    )
     
     # 📌 파이썬 가비지 컬렉터의 간섭을 배제하고 비차단 멀티 섹터 concurrent 인터럽트 폴링을 집행하기 위해
     # 최종 비동기 사후 복구 모니터링 루프를 asyncio 네이티브 엔진을 통해 다이렉트 바이패스 가동합니다.
