@@ -70,4 +70,4 @@ graph TD
 * 📄 **레거시 3D 토카막 대비 DFR 아키텍처 비교:** [`docs/system_comparison.md`](docs/system_comparison.md)
 * 📄 **평시 정상 상태 운전 및 전자기적 중첩 규격:** [`docs/Normal_Operation_Specs.md`](docs/Normal_Operation_Specs.md)
 * 📄 **비상 대응 및 3단계 동적 디지털 플러시 규격:** [`docs/Emergency_Sequence.md`](docs/Emergency_Sequence.md)
-
+* 📄 **초심자의 물리 노트 계속 추가 및 수정예정:** [`docs/Physics_note.md`](docs/Physics_note.md)
