@@ -43,39 +43,49 @@ DFR(FNG-V3) 시스템은 기존 3D 볼류메트릭 토카막의 거대한 비선
 *   FPGA/ASIC 논리 패브릭 직결 및 `__builtin_memcpy` 기반 무분기 MUX 실패 토큰 사출을 통한 지터를 최소화한 결정론적 항상성 마감.
 
 
+
 ```mermaid
 graph TD
     %% 전체 제어 루프 구조 정의
-    subgraph SYSTEM_LAYERS ["🎛️ 4계층 상호작용 및 항상성 제어 루프 명세"]
+    subgraph SYSTEM_LAYERS ["🎛️ DFR V3 4계층 상하향 폐루프 및 항상성 제어 명세"]
         direction TB
 
         %% Layer 4 정의
-        L4["<b>Layer 4 : 항상성 커널(거시적 관리)</b><br><font size=2>• 1. 배관 온도 / 2. 특정 구간 패킷 등속 운동 체크<br>• 핵심 제어: 잉크젯 발사 주파수(Hz) 다이얼 조절 (출력/냉각 제어) 항상성 인프라 추론 (예: 발사 속도 대비 배관 온도와 진공 속 등속 붕괴 유무)</font>"]
+        L4["<b>Layer 4 : 항상성 커널 (🧠 거시적 인지 추론)</b><br><font size=2>• 2.0초 백그라운드 패시브 스캔 및 외부 Grid 수요 동기화<br>• 핵심 제어: 배관 과열 징후 감지 시 잉크젯 주입 주파수 다일 조절 5kHz ~ 15kHz 가변<br>• 실시간 핫 패스 구동단과 격리된 항상성 추론으로 지터 침투 원천 차단</font>"]
 
         %% Layer 3 정의
-        L3["<b>Layer 3 : 격자 수술 (Lattice Surgery)</b><br><font size=2>• 비선형 반발력 및 예외 처리<br>• 핵심 제어: 특정 블록 오작동 시 찰나의 마스킹(On/Off)</font>"]
+        L3["<b>Layer 3 : 격자 수술 (⛓️ 사후 플러시 및 오케스트레이션)</b><br><font size=2>• 비동기 asyncio 이벤트 루프 기반 16개 독립 자석 섹터 위상 제어<br>• 핵심 제어: 고장 섹터 발견 시 전력망 가상 격자 격리 및 10⁻⁵ Torr 초고진공 강제 안정화<br>• 다운스트림 관로를 통한 하부 칩셋 레지스터 직접 오버라이트 및 소프트 재점화 집행</font>"]
 
         %% Layer 2 정의
-        L2["<b>Layer 2 : 하드웨어 브릿지</b><br><font size=2>• 0ns 제로카피 공유 메모리 (__cuda_array_interface__)<br>• 핵심 제어: 데이터 지연 없는 실시간 전달</font>"]
+        L2["<b>Layer 2 : 하드웨어 브릿지 (🔌 메모리 인터셉터)</b><br><font size=2>• C++20 likely 속성을 활용해 평시 구동단 CPU 파이프라인 지터를 0ns로 소산<br>• 파이썬 가비지 컬렉터 무력화 라이프사이클 캡슐 안전 펜스 작동<br>• 핵심 제어: PCIe BAR 공유 메모리 실리콘 물리 주소를 복사 없이 NumPy 배열 뷰로 직결</font>"]
 
-        %% Layer 1 정의
-        L1["<b>Layer 1 : 실리콘 에지</b><br><font size=2>• 1/0 이산 비트에 맞춰 나노초 주소 스왑 및 8분할 대각선 전자석 스위칭 * 전자석 전체가 전방으로 등속운동(파도치기) <br> 특정 상황시 가속 플러시 및 Y분기점에서는 챔버로 통로 변경 <br> 글로벌 시계가 아닌 n번째 자석과 n+1번째 자석간의 그리드 통신 <br> 위험 상황시 레이어 1 에서 선제 처리 후 상위 단계로 전달
-</font>"]
+        %% Layer 1 메인 컨테이너 및 수평 노드 정의 (subgraph 우회로 정렬 유도)
+        L1["<b>Layer 1 : 실리콘 에지 (⚡ 결정론적 하드웨어 커널)</b><br><font size=2>• if-else 분기를 원천 배제한 100% 무분기 비트 마스킹 및 스칼라 파이프라인 0ns 사출<br>• 파데 노치 필터 및 조셉 폼 기반 수치해석적 음수반전 방어벽 적용<br>• 핵심 제어: 5회 결함 반복 즉시 일반 노드는 1.5f 가속 펌핑 / 챔버 노드는 직진 차단 및 우회 게이트 오픈</font>"]
 
-        %% 하향식 제어 파이프라인 연결
-        L4 -->|거시 상태 변수 전달| L3
-        L3 -->|인터럽트 및 예외 신호 라우팅| L2
-        L2 -->|sub-10ns 하드웨어 인터셉트| L1
+        subgraph L1_GRID ["⚡ Layer 1 실물 파이프라인 (그리드 메시 통신 축)"]
+            direction LR
+            L1_N1["n번째 자석 노드<br>(일반 자석노드)<br>(뒤편 가속 추진 1.5f)"] <-->|글로벌 클록 없음<br>비동기 이웃 메시 통신| L1_N2["n+1번째 자석 노드<br>(챔버부 자석노드)<br>(순방향 차단 & 챔버 개방)"]
+        end
+
+        %% 상하향식 유기적 피드백 관로 연결
+        L4 <--> L3
+        L3 <--> L2
+        L2 <--> L1
+        L1 <--> L1_GRID
     end
 
-    %% 🎨 깃허브 파서 안전 규격 스타일링 (줄바꿈 분리)
+    %% 🎨 깃허브 파서 안전 규격 스타일링
     style SYSTEM_LAYERS fill:#0d1117,stroke:#30363d,stroke-width:2px,color:#c9d1d9
+    style L1_GRID fill:#161212,stroke:#ff7b72,stroke-width:1px,color:#c9d1d9
     
     style L4 fill:#1f242c,stroke:#58a6ff,stroke-width:1px,color:#c9d1d9
     style L3 fill:#1f242c,stroke:#ff7b72,stroke-width:1px,color:#c9d1d9
     style L2 fill:#1f242c,stroke:#79c0ff,stroke-width:1px,color:#c9d1d9
     style L1 fill:#221b1b,stroke:#ff7b72,stroke-width:2px,color:#ff7b72
+    style L1_N1 fill:#2c1919,stroke:#ff7b72,stroke-width:1px,color:#ff7b72
+    style L1_N2 fill:#2c1919,stroke:#ff7b72,stroke-width:1px,color:#ff7b72
 ```
+
 
 ## 📂 추가 명세 
 
