@@ -130,13 +130,13 @@ graph TD
         P1(("● 패킷")) ---> P2(("● 패킷")) ---> P3(("● 패킷")) ---> P4(("● 패킷"))
     end
     
-    MAGNET["🧲 Layer 1: 8분할 대각 전자석 블록<br>(sub-10ns 단위 초고속 위상 호위)"]
+    MAGNET["🧲 Layer 1: 8분할 대각 전자석 블록<br>(비상시 sub-10ns 단위 챔버 우회)"]
 
     %% 흐름 연결
     HEAD ==> |"초당 수천 번 분사<br>(Drop-on-Demand)"| DROPLET
     DROPLET ==> |"가이드 채널 진입"| LASER
     LASER ==> |"순간 상변화 및 플라즈마화"| P1
-    MAGNET -.-> |"정전기적 자가 압축 및<br>중심축 복원력 360도 투사"| TRACK
+    MAGNET -.-> |"순방향(z축) 방향성 부여 <br> 거시적 속도 제어(파도 형태)"| TRACK
 
     %% 스타일 적용
     class HEAD head;
