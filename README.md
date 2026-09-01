@@ -8,6 +8,7 @@ DFR(FNG-V3) 시스템은 기존 3D 볼류메트릭 토카막의 거대한 비선
 ---
 
 ## 🧠 Level 4 (Cognitive Inference & Structural Immunity): 거시 학습 및 상황별 패킷량 조절 타워 (Macro-Inference & Dynamic Injection Dial)
+## `dfr_macro_cognitive_dial.py`
 
 * **구조적 위치:** 실시간 연산 가속 파이프라인과 완벽히 격리되어, 전역 텔레메트리 데이터를 기반으로 장기적 안전성과 출력 효율을 조율하는 하향식 지능형 사령탑.
 * **주요 역할:**
@@ -15,6 +16,7 @@ DFR(FNG-V3) 시스템은 기존 3D 볼류메트릭 토카막의 거대한 비선
     * **[예측 정비 학습]** 전 구간 자석 노드에서 비동기적으로 수집된 누적 결함 빈도를 기반으로 자가 진단을 수행하여 부품 수명 및 교체 주기를 사전 추론.
 
 ## 👑 Level 3 (Global Orchestration): 자율 소산 사후 검증 및 복구 사령탑 (Asynchronous Post-Flush Recov-Orchestrator)
+## `dfr_post_flush_orchestrator.py`
 
 * **구조적 위치:** 말단 실리콘 에지(L1)와 가속 브릿지(L2) 위에서 거시적인 예외 상태와 복구 시퀀스를 집행하는 비동기 소프트웨어 중추.
 * **주요 역할:**
@@ -23,12 +25,15 @@ DFR(FNG-V3) 시스템은 기존 3D 볼류메트릭 토카막의 거대한 비선
 
 
 ## 🏰 Level 2 (Hardware-Software Bridge): 임베디드 가속 및 가속기 브릿지 (C++ Accelerator Bridge Conduit)
+## `c_accelerator_bridge_conduit.cpp`
 
 *   **구조적 위치:** 최하단 실리콘 말초계(L1)와 상위 오케스트라단(L3)을 지연 없이 연결하는 순수 임베디드 데이터 관로.
 *   **주요 역할:** `__cuda_array_interface__` v3 규격을 이용해 PCIe BAR Shared Memory 영역에서 0ns 제로카피 포인터 가로채기를 집행하여 호스트-디바이스 간 딥카피 병목 원천 제거. 파이썬 가비지 컬렉터(GC)의 개입을 원천 차단하여 메모리 할당 제로 지터 실현.
 *  C++20 `[[unlikely]]` 예외 가드를 품은 베어메탈 ➔ JAX/XLA 고속 포인터 바이패스 브릿지, `fluid-mesh-hpc` 참조.
 
+
 ## ⛓ Level 1 (Hardware Silicon Edge): 최하단 하드웨어 실리콘 말초계 (Sub-Nanosecond Silicon Edge)
+## `unified_magnet_master_core.h`
 
 *   **구조적 위치:** 실제 플라즈마 패킷과 대면하는 최하부 물리 실리콘 엣지 레이어 (GaN/SiC 전력 인버터 및 코일단 직결).
 *   **주요 역할:** 
