@@ -60,7 +60,7 @@ class MockLayer12HardwareConduit:
                 self.main_z_flux = 1.5f
                 self.chamber_curl_flux = 0.0f
             else:
-                # [챔버 직전 Y자 분기 노드]: 직진 0.0f 완전 차단 차단벽 형성 + 대각 소용돌이 흡입 게이트 개방
+                # [챔버 직전 Y자 분기 노드]: 직진 자력 차단(0.0f 가상 격벽) + 대각 탈출축 자석 세트 역방향 2배 폭발 가동을 통한 관성 유도 사출 선로 형성
                 self.main_z_flux = 0.0f
                 self.chamber_curl_flux = -curl_pred * 2.0f
         else:
