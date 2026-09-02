@@ -11,8 +11,12 @@
 """
 
 
+import io
+import base64
+import unittest
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from typing import Final, Optional
 
 class DFRHomeostasisSolver:
@@ -49,6 +53,7 @@ class DFRHomeostasisSolver:
         geometry_ratio = self.r_packet / self.R_wall
         q_rad = self.epsilon_eff * self.SIGMA * (self.T_plasma ** 4) * geometry_ratio
         return q_rad / self.H_VAP
+
 
     def run_simulation(
         self, 
@@ -167,7 +172,7 @@ class DFRHomeostasisSolver:
                 )
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 📌 여기에 새로 결합된 [최종 진화형 다중물리 동기 결합 검증 메서드]
+    # 📌  [다중물리 동기 결합 검증 메서드] 추가결합
     # ──────────────────────────────────────────────────────────────────────────
     def test_frequency_modulation_co_locking_attenuation(self) -> None:
         """
@@ -314,12 +319,12 @@ class DFRHomeostasisSolver:
 
 
 # =====================================================================
-# 3. 📌 최종 결속: 단점을 극복하는 하이브리드 CLI 엔트리 포인트 (Execution Control)
+# 3.  최종 결속: 단점을 극복하는 하이브리드 CLI 엔트리 포인트 (Execution Control)
 # =====================================================================
-if __name__ == '__main__':
+ if __name__ == '__main__':
     import sys
     
-    # 📌 코디자인 융합 완결: 터미널 인자에 '--plot'이 수신되면 로컬 GUI 디스플레이 모드로 즉각 스왑
+    #  코디자인 융합 완결: 터미널 인자에 '--plot'이 수신되면 로컬 GUI 디스플레이 모드로 즉각 스왑
     if '--plot' in sys.argv:
         print("\n🌐 [DFR Digital Twin] 로컬 GUI 가시화 필터 모드를 트리거합니다.")
         
