@@ -12,7 +12,7 @@ namespace py = pybind11;
  * @return 파이썬 단에서 복사(Allocation) 없이 실시간 참조할 NumPy 이중 포트 버퍼 뷰
  */
 py::array_t<float> extract_magnet_flux_buffer(uintptr_t struct_raw_ptr) {
-    /* 📌 C++20 [[unlikely]] 속성을 활용해 포인터 에러가 없는 평시 구동단의 CPU 파이프라인 지터를 0ns로 소산 */
+    /*  C++20 [[unlikely]] 속성을 활용해 포인터 에러가 없는 평시 구동단의 CPU 파이프라인 지터를 0ns로 소산 */
     if (!struct_raw_ptr) [[unlikely]] {
         throw std::invalid_argument("CRITICAL: Received Null hardware register address inside Upstream Bridge.");
     }
@@ -23,7 +23,7 @@ py::array_t<float> extract_magnet_flux_buffer(uintptr_t struct_raw_ptr) {
     /* Single Source of Truth: 32바이트 캐시라인 블록 내부의 자력 상태 벡터 시작 포인터 획득 */
     float* magnet_head_ptr = &(self->main_z_flux);
 
-    /* 🛡️ 파이썬 가비지 컬렉터(GC) 무력화 라이프사이클 안전 펜스 작동 */
+    /*  파이썬 가비지 컬렉터(GC) 무력화 라이프사이클 안전 펜스 작동 */
     py::capsule buffer_lifecycle_fence(magnet_head_ptr, [](void* p) {
         /* 하드웨어 레지스터 생명 주기는 베어메탈 패브릭에서 독자 관리되므로 임의 메모리 반환을 원천 차단 */
     });
@@ -49,7 +49,7 @@ void trigger_hardware_reignition_conduit(uintptr_t struct_raw_ptr) {
     /* 상부의 소프트웨어 신호와 하부 실리콘 주소 공간을 0ns 만에 가로채기 재해석 */
     UnifiedMagnetRegister32* self = reinterpret_cast<UnifiedMagnetRegister32*>(struct_raw_ptr);
 
-    /* 📌 하향식 제어 채널의 물리적 달성: 
+    /*  하향식 제어 채널의 물리적 달성: 
        상위 파이썬 단의 비동기 복구 호출 즉시, 하드웨어 레지스터 내부의 비상 록인 플래그와 
        연속 실패 카운터를 비분기 레벨에서 0으로 강제 초기화(소프트 리셋)하여 50Hz 평시 주행 상태 복귀 유도 */
     self->is_emergency_on = 0;
@@ -70,7 +70,7 @@ PYBIND11_MODULE(c_accelerator_bridge_conduit, m) {
     m.def("extract_magnet_flux_buffer", &extract_magnet_flux_buffer,
           "Extracts raw hardware magnet flux array with strict 0ns pointer bypass allocation via unified memory");
 
-    /* 2. 📌 하향식(Downstream) 제어 관로: 상위 사령탑의 복구 시그널을 하부 칩셋 레지스터에 직결 주입 */
+    /* 2. 하향식(Downstream) 제어 관로: 상위 사령탑의 복구 시그널을 하부 칩셋 레지스터에 직결 주입 */
     m.def("trigger_hardware_reignition_conduit", &trigger_hardware_reignition_conduit,
           "Directly overwrites and resets hardware anomaly counters and flags for soft-reignition via unified memory");
 }
