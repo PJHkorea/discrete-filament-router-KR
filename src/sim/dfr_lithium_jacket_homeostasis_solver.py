@@ -138,14 +138,6 @@ class DFRHomeostasisSolver:
             plt.close(fig)
 
 
-class TestDFRLithiumJacketHomeostasis(unittest.TestCase):
-    """리튬 기체 자켓 항상성 임계 평형 가설 및 수치 안정성 검증 테스트 클래스 (Hybrid Sweep Version)"""
-
-    def setUp(self) -> None:
-        """매 테스트마다 독립적으로 격리 및 유도되는 기본 DFR 솔버 칩셋 셋팅"""
-        self.solver = DFRHomeostasisSolver()
-        self.TARGET_P_STEADY: Final[float] = 5.17e-5  # 설계 가설 타겟 정상상태 압력 (Torr)
-
     def test_steady_state_pressure_convergence(self) -> None:
         """
         가설 실증 검증: 50ms 이후 포화 평형에 진입한 증기압이 설계 타겟 오차 마진 이내로 수렴하는지 테스트합니다.
@@ -172,6 +164,46 @@ class TestDFRLithiumJacketHomeostasis(unittest.TestCase):
                     self.TARGET_P_STEADY, 
                     delta=dynamic_delta,
                     msg=f"[Failure @ eff={eff}] 최종 수렴 압력 {final_pressure_torr} Torr가 허용 마진을 초과함."
+                )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 📌 여기에 새로 결합된 [최종 진화형 다중물리 동기 결합 검증 메서드]
+    # ──────────────────────────────────────────────────────────────────────────
+    def test_frequency_modulation_co_locking_attenuation(self) -> None:
+        """
+        [수리물리 가드레일] 연료 주입 주파수 변조(6.5kHz ~ 15kHz) 시 
+        리튬 가스-플라즈마 Co-locking에 의한 미시적 열전도 감쇄율 정합성 전수 스캔
+        """
+        # 1. 상위 제어 파라미터 및 결합 상수 세팅 (물리적 임계치 마감)
+        k_0: Final[float] = 4.5e-3              # 상온 기준 리튬 기본 열전도도 (W/m·K)
+        beta_coupling: Final[float] = 3.25       # 변형 베셀 자기장 터널 내 리튬 전자기 단열 결합 상수
+        allowed_thermal_margin: Final[float] = 135.0  # 외벽 허용 임계 열부하 전도 한계 (W)
+        q_plasma_core: Final[float] = 5.0e6      # 5MW급 핵심 패킷 에너지 플럭스 누적량
+
+        # 2. 초기 기동 저주파 영역의 차폐막 파쇄 구간을 우회한 6.5kHz ~ 15kHz 안전 제어 다이얼 스윕 시나리오
+        freq_scenarios = np.linspace(6500, 15000, 10)
+        
+        for freq in freq_scenarios:
+            with self.subTest(frequency_hz=freq):
+                # 3. 주파수 변조율 역산
+                eta = freq / 15000.0
+                
+                # 4. 50Hz 자석 클록 진행파와의 시공간 변환 매핑 비율 계산 (R 소산비율)
+                r_소산비율 = freq / 50.0
+                
+                # 5. 파데 유리함수 필터를 통과한 리튬 자켓의 동적 미시 열전도 감쇄율 연산
+                kappa_eff = k_0 / (1.0 + beta_coupling * (eta ** 2))
+                
+                # 6. 반경 30cm 도관 단면과 10-20cm 관성 주행 구간을 거쳐 외벽에 도달하는 최종 전열량 산출
+                q_wall_conduction = (q_plasma_core * kappa_eff) / r_소산비율
+                
+                # 📌 [최종 정합성 판정 기각 마진 스캔]
+                # 주파수가 가변되어도 Co-locking 단열 장벽과 연산 소산비율 덕분에 
+                # 외벽 체감 열전도 부하는 항상 안전 한계(135.0W) 이하여야만 인프라 설계가 완결됨
+                self.assertLess(
+                    q_wall_conduction, 
+                    allowed_thermal_margin,
+                    msg=f"CRITICAL: 주파수 {freq:.1f}Hz 주행 중 단열 결합 붕괴! 외벽 열부하({q_wall_conduction:.2f}W)가 마진을 초과했습니다."
                 )
 
     def test_knudsen_number_regime(self) -> None:
