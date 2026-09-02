@@ -13,8 +13,12 @@ import math
 from typing import List, Dict
 
 # 상위 계층 핵심 비동기 복구 및 인지 조절 아키텍처 커널 로드
-from dfr_post_flush_orchestrator import DFRAperiodicPostFlushOrchestrator
-from dfr_macro_cognitive_dial import DFRMacroCognitiveDialTower
+try:
+    from dfr_post_flush_orchestrator import DFRAperiodicPostFlushOrchestrator
+    from dfr_macro_cognitive_dial import DFRMacroCognitiveDialTower
+except ImportError:
+    # 테스트 및 유연한 환경을 위한 가상 Mock 아키텍처 폴백(Fallback) 보장
+    pass
 
 # =========================================================================
 # [LAYER 1 & 2 MOCK BARE-METAL EMBEDDED CONDUIT EMULATOR]
@@ -27,7 +31,7 @@ class MockLayer12HardwareConduit:
         self.sector_id = sector_id
         self.is_chamber_node = is_chamber_node # 0: 일반 가속 노드 | 1: Y자 분기점 챔버 노드
         
-        # 📌 고도화: 64비트 하드웨어 레지스터 주소 공간 모사 시 발생할 수 있는 오버플로우 및 주소 파손 방지 마스킹(48비트 또는 64비트 가드레일)
+        # 📌 고도화: 64비트 하드웨어 레지스터 주소 공간 모사 시 발생할 수 있는 오버플로우 및 주소 파손 방지 마스킹
         self.hardware_address = (base_addr + (sector_id * 32)) & 0xFFFFFFFFFFFF # strict 32바이트 정렬 메모리 매핑 모사
         
         # UnifiedMagnetRegister32 하드웨어 레지스터 필드 구조체 1:1 모사 미러링 Buffer
@@ -36,8 +40,8 @@ class MockLayer12HardwareConduit:
         self.fail_counter = 0
         self.is_emergency_on = 0
 
-
-        def process_hardware_clock_cycle(self, upstream_signal: float, cos_50hz: float, sin_50hz: float) -> float:
+    # 📌 휴먼 에러 교정 ①: __init__ 내부에서 독립된 클래스 메서드로 인덴트(들여쓰기) 전격 정상화
+    def process_hardware_clock_cycle(self, upstream_signal: float, cos_50hz: float, sin_50hz: float) -> float:
         """
         @brief C-C++ 기반의 마스터 제어 커널(unified_magnet_master_process)의 하드와이어드 연산 로직을 에뮬레이션
         """
@@ -53,9 +57,12 @@ class MockLayer12HardwareConduit:
             self.is_emergency_on = 1
 
         # 2. 평시 정상 50Hz 수직 상태 회전 및 파데 유리함수 노치 필터 가동
-        main_z_pred = (cos_50hz * self.main_z_flux) - (sin_50hz * self.chamber_curl_flux)
-        curl_pred   = (sin_50hz * self.main_z_flux) + (cos_50hz * self.chamber_curl_flux)
-        normal_flux_output = main_z_pred # 파데/조셉 폼 통과 후 정착 가정값
+        # 📌 휴먼 에러 교정 ②: 비상 상태 돌입으로 내부 플러그가 변조되어도 50Hz 교류 기준 전자기 위상은 
+        # 기저 정규화 주파수(평시 기준값 1.0)를 추종하여 부호 반전 연산 오염을 원천 차단
+        base_z = 1.0 if self.is_chamber_node == 0 else 0.0
+        main_z_pred = (cos_50hz * base_z) - (sin_50hz * self.chamber_curl_flux)
+        curl_pred   = (sin_50hz * base_z) + (cos_50hz * self.chamber_curl_flux)
+        normal_flux_output = main_z_pred 
 
         # 3. 비상 트리거 록인 시: 하드웨어 세라믹 핀 마킹(is_chamber_node) 조건별 역할 분담 강제 집행
         if self.is_emergency_on == 1:
@@ -66,7 +73,8 @@ class MockLayer12HardwareConduit:
             else:
                 # [챔버 직전 Y자 분기 노드]: 직진 자력 차단(0.0 가상 격벽) + 대각 탈출축 자석 세트 역방향 2배 폭발 가동을 통한 관성 유도 사출 선로 형성
                 self.main_z_flux = 0.0
-                self.chamber_curl_flux = -curl_pred * 2.0
+                # 외부 순수 교류 동기 클럭 필터를 기반으로 정확한 역방향 벡터 기하 사출 집행
+                self.chamber_curl_flux = -sin_50hz * 2.0
         else:
             # 평시 운전 복귀 및 정속 파도타기 유지
             self.main_z_flux = normal_flux_output
@@ -74,6 +82,7 @@ class MockLayer12HardwareConduit:
 
         # 핀 가이드라인에 따른 하이브리드 출력 최종 사출
         return self.chamber_curl_flux if self.is_chamber_node == 1 and self.is_emergency_on == 1 else self.main_z_flux
+
 
 
 
@@ -105,30 +114,38 @@ class DFRDigitalTwinSimulator:
                 num_sectors=16, 
                 sector_register_addresses=self.register_address_table
             )
-        except NameError:
+        except (NameError, ImportError):
             # 외부 커널 모듈 부재 시 동작 가능한 간이 Mock 오케스트레이터 동적 생성
             class MockL3Orchestrator:
                 def __init__(self):
                     self.track_status = ["STEADY"] * 16
                     self.is_running = True
-                def report_magnet_interrupt_event(self, sector_id, marker_signal): pass
+                def report_magnet_interrupt_event(self, sector_id, marker_signal):
+                    # 📌 복구 추적 보강: 아노말리 발생 섹터 상태를 비상(EMERGENCY) 마킹하여 제어 타워에 공유
+                    if marker_signal == -99.0:
+                        self.track_status[sector_id] = "EMERGENCY"
                 async def run_orchestrator_loop(self):
-                    while getattr(self, 'is_running', True): await asyncio.sleep(0.01)
+                    while getattr(self, 'is_running', True): 
+                        await asyncio.sleep(0.01)
             self.orchestrator_l3 = MockL3Orchestrator()
 
         try:
             self.cognitive_dial_l4 = DFRMacroCognitiveDialTower(target_temperature=500.0)
-        except NameError:
+        except (NameError, ImportError):
             # 외부 커널 모듈 부재 시 동작 가능한 간이 Mock 다이얼러 동적 생성
             class MockL4DialTower:
-                async def run_cognitive_dial_loop(self, orchestrator): pass
+                async def run_cognitive_dial_loop(self, orchestrator): 
+                    # 백라운드에서 주기적으로 L3 상태 관측 모사
+                    while getattr(orchestrator, 'is_running', True):
+                        await asyncio.sleep(0.02)
             self.cognitive_dial_l4 = MockL4DialTower()
         
-        # 모의 타겟 주행 패킷 발생기 환경 변수 설정
+        # 📌 물리 가이드라인 동기화: 수치해석 타임스텝 및 시공간 매핑 주기 보강 (dt = 1ms 고정)
+        self.dt = 0.001
         self.sim_clock_tick = 0
         self.packet_stream: List[float] = [1.0] * 16 # 평시 정상 전하 스트림 기저선 상태 [1.0]
 
-    async def run_unified_simulation_pipeline(self):
+        async def run_unified_simulation_pipeline(self):
         """
         @brief 50Hz 자석 파도타기 리듬 속에서 15kHz 연속 패킷 주행 중 비상 사출 및 L3/L4 복구 전 과정을 에뮬레이션
         """
@@ -137,23 +154,26 @@ class DFRDigitalTwinSimulator:
         print(f" ➔ 입구 잉크젯 최대 사출 사양: 15.0 kHz (Level 4 동적 다이어링 연동)")
         print(f" ➔ 배관 정상 상태 목표 온도: 500.0 °C (GlidCop 열 회수 전열 평형선)")
 
-        
-               # 백그라운드 태스크로 Level 3 오케스트레이터 및 Level 4 인지 타워 루프 병렬 점화
+        # 백그라운드 태스크로 Level 3 오케스트레이터 및 Level 4 인지 타워 루프 병렬 점화
         l3_task = asyncio.create_task(self.orchestrator_l3.run_orchestrator_loop())
         l4_task = asyncio.create_task(self.cognitive_dial_l4.run_cognitive_dial_loop(self.orchestrator_l3))
         
         # 호스트 제어 인터럽트 수집 동기화를 위한 모의 타임 슬롯 러닝 가동 (총 40스텝 스트리밍)
         try:
-            for step in range(40):
-                await asyncio.sleep(0.1) # 시공간 매핑 윈도우 스텝 지연
+            # 📌 고도화: 시공간 매핑 윈도우 스텝을 100스텝으로 확장하여, 복구 드라이버의 정상 수렴 거동 추적 가시성 확보
+            for step in range(100):
+                # 📌 휴먼 에러 교정 ①: 100ms 슬립을 제거하고 물리 노트 사양인 수치해석 타임스텝 self.dt(1ms) 클럭으로 동기화
+                await asyncio.sleep(self.dt) 
                 self.sim_clock_tick += 1
                 
                 # 50Hz 그리드 교류 위상차 함수 맵핑 계산
-                phase_angle = 2.0 * math.pi * 50.0 * (self.sim_clock_tick * 0.001)
+                phase_angle = 2.0 * math.pi * 50.0 * (self.sim_clock_tick * self.dt)
                 cos_50hz = math.cos(phase_angle)
                 sin_50hz = math.sin(phase_angle)
                 
-                print(f"\n[⏱️ Time Step {step+1}] ---------------------------------------------------")
+                # 가독성을 위해 10스텝(10ms) 주기로 통합 실전 로그 출력
+                if step % 10 == 0 or step == 11:
+                    print(f"\n[⏱️ Time Step {step+1} ({self.sim_clock_tick}ms)] ---------------------------------------------------")
                 
                 # ---------------------------------------------------------------------
                 # [시뮬레이션 인젝션 시나리오: 10스텝 시점에 6번 선로 구역 파손 발생 유도]
@@ -172,20 +192,20 @@ class DFRDigitalTwinSimulator:
                     output_flux = node.process_hardware_clock_cycle(upstream_signal, cos_50hz, sin_50hz)
                     self.packet_stream[s] = output_flux
                     
-                    # 📌 하향식 물리 드라이버의 실전 거동 감시 피드백
-                    # Layer 3 오케스트레이터의 가동 처리에 의해 하부 레지스터 덮어쓰기가 완료되었는지 역감지
-                    if node.is_emergency_on == 1:
+                    # 📌 하향식 물리 드라이버의 실전 거동 감시 피드백 로그 정돈 (출력 폭주 방지 인터셉트)
+                    if node.is_emergency_on == 1 and (step % 10 == 0 or step == 11):
                         if node.is_chamber_node == 0:
                             print(f"  ➔ [L1 Sector {s}] 비상 가속 록인 작동 중 ➔ 포트1(main_z) = 1.5 규격화 가속 사출 중!")
                         else:
                             print(f"  ➔ [L1 Sector {s} 🛡️ 챔버] 직진 차단 완료(0.0) ➔ 포트2(curl_gate) 소용돌이 게이트 최대 개방!")
                     
-                    # Layer 3 오케스트레이터가 물리 주소를 격파하여 재점화(Re-ignition) 포맷팅을 집행했는지 체크
-                    if node.is_emergency_on == 0 and node.fail_counter == 0 and step > 20:
-                        # 하향식 제어 채널의 물리적 완성 감지 성공 지표
-                        pass
+                    # 📌 가상 시나리오 보강: L3 복구망 사령탑이 25ms 시점에 단선을 납땜 복구하여 STEADY로 리셋 명령을 사출했다고 모사 에뮬레이션
+                    if step == 25:
+                        self.orchestrator_l3.track_status[s] = "STEADY"
 
-                # Level 3 오케스트레이터 인터페이스로 현재 하드웨어 BAR 메모리 버퍼의 신호 상태를 실시간 오프로드
+
+
+                              # Level 3 오케스트레이터 인터페이스로 현재 하드웨어 BAR 메모리 버퍼의 신호 상태를 실시간 오프로드
                 # (실전 환경에서는 PCIe DMA 및 Layer 2 extract_magnet_flux_buffer에 의해 0ns 카피프리로 올라갑니다)
                 for s in range(16):
                     if self.packet_stream[s] == -99.0 or self.hardware_sectors[s].main_z_flux == 1.5:
@@ -195,16 +215,25 @@ class DFRDigitalTwinSimulator:
                 # 📌 고도화: 메인 루프 연산 도중 백그라운드 L3/L4 Task가 컨텍스트 스위칭을 통해 비동기 상태를 처리할 숨통(시간 마진) 확보
                 await asyncio.sleep(0)
 
-
-                                # Layer 3 사후 검증이 완료되어 실제 물리 하드웨어 리셋 드라이버가 관통 처리를 집행했는지 동기화 복사
+                # Layer 3 사후 검증이 완료되어 실제 물리 하드웨어 리셋 드라이버가 관통 처리를 집행했는지 동기화 복사
                 for s in range(16):
-                    if self.orchestrator_l3.track_status[s] == "STEADY" and self.hardware_sectors[s].is_emergency_on == 1:
-                        # 📌 Downstream Driver 복구 연동 집행: 상위의 명령을 받아 실제 가상 물리 소자 강제 초기화 마감
+                    # 📌 휴먼 에러 교정 ①: L3 사령탑이 복구 신호(STEADY)를 보냈다면, 비상 온/오프 상태와 상관없이 
+                    # 15번 특수 챔버 노드까지 전수 추적하여 강제 물리 리셋 마감 집행
+                    if self.orchestrator_l3.track_status[s] == "STEADY" and (self.hardware_sectors[s].is_emergency_on == 1 or s == 15):
+                        
+                        # 하향식 수동 리셋 로그 출력 (10스텝 단위 분기)
+                        if step == 26 and (s == 6 or s == 15):
+                            print(f"  ⚡ [Downstream Driver] 복구 명령 도달 -> Sector {s} 레지스터 하드웨어 강제 포맷팅 마감...")
+                        
+                        # 📌 15번 챔버 노드를 데드락에서 무조건 구출하는 완벽한 하드웨어 레지스터 초기화 분기
                         self.hardware_sectors[s].is_emergency_on = 0
                         self.hardware_sectors[s].fail_counter = 0
-                        self.hardware_sectors[s].main_z_flux = 1.0
+                        self.hardware_sectors[s].main_z_flux = 1.0 if s != 15 else 0.0 # 평시 물리 기저치로 원상 복구
                         self.hardware_sectors[s].chamber_curl_flux = 0.0
-                        self.packet_stream[s] = 1.0
+                        self.packet_stream[s] = 1.0 # 전하 스트림 정상 복귀
+                        
+                        # 리셋이 완료되었으므로 오케스트레이터의 상태 메모리도 동기화 초기화
+                        self.orchestrator_l3.track_status[s] = "CLEARED"
                         
         finally:
             # 시뮬레이션 종료 시 백그라운드 지능형 비동기 타스크 자율 수렴 및 해제
