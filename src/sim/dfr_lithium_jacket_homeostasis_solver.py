@@ -1,3 +1,16 @@
+"""
+@file dfr_lithium_jacket_homeostasis_solver.py
+@brief DFR 리튬 기체 자켓 항상성 임계 평형 수치해석 솔버 (Numerical Verification Solver)
+@details 
+    본 코드는 /docs/Physics_note.md 의 [4. 리튬 기체 자켓 압착 메커니즘] 및 
+    [4-2 거시적 포화 평형] 장에 기술된 물리학적 가설을 정량적으로 실증하기 위해 설계되었습니다.
+    
+    100M K 플라즈마 패킷의 슈테판-볼츠만 복사 에너지 플럭스와 Hertz-Knudsen 기화 잠열 관계식을 결합하여,
+    15 kHz 운전 진입 후 50ms 이내에 정상상태 증기압 P_steady ≈ 5.17 x 10^-5 Torr 로 
+    자가 조절형 항상성(Homeostasis) 수렴이 일어남을 수학적으로 정리해봤습니다.
+"""
+
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
