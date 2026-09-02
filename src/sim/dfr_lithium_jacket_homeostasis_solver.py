@@ -49,25 +49,37 @@ class DFRHomeostasisSolver:
         q_rad = self.epsilon_eff * self.SIGMA * (self.T_plasma ** 4) * geometry_ratio
         return q_rad / self.H_VAP
 
-    def run_simulation(self, t_max: float = 0.1, num_points: int = 200, decay_rate: float = 80.0) -> pd.DataFrame:
-        """시간 도메인 동적 포화 평형 시뮬레이션을 수행하고 고속 데이터프레임을 사출합니다."""
+       def run_simulation(self, t_max: float = 0.1, num_points: int = 200, pump_efficiency: float = 0.5) -> pd.DataFrame:
+        """
+        시간 도메인 동적 포화 평형 시뮬레이션을 수행하고 고속 데이터프레임을 사출합니다.
+        
+        📌 지수부 변수화 완료: 하드코딩된 감쇄율(decay_rate)을 소멸시키고, 
+        도관의 기하학적 체적(V)과 진공 펌프 배기 속도(S_vac) 간의 동역학적 시정수로 자동 유도합니다.
+        """
         J_v = self.calculate_steady_state_flux()
         time_array = np.linspace(0.0, t_max, num_points)
         
-        # 📌 코디자인 최적화: 시전달 루프 내 중복 나눗셈과 상수를 하나의 진공 이득(Gain) 항으로 소산
+        # 1. 1D 선형 트랙 도관의 물리적 체적 계산 (V = pi * r^2 * L) [단위 길이 L = 1.0m]
+        conduit_volume = np.pi * (self.R_wall ** 2) * 1.0
+        
+        # 2. 진공 배기 동역학에 따른 이론적 지수 감쇄 시정수 유도 (decay_rate = S_vac / V)
+        # 실효 흡입 유체 저항 효율(pump_efficiency)을 반영하여 물리적 결속 마감
+        dynamic_decay_rate = (self.S_vac / conduit_volume) * pump_efficiency
+        
+        # 이상기체-배기 진공 이득(Gain) 및 최대 포화 압력 Pa 계산
         ideal_gas_vacuum_gain = (self.A_wall * self.R_GAS * self.T_vapor) / (self.M_LI * self.S_vac)
         P_pa_max = J_v * ideal_gas_vacuum_gain
         
-        # 포화 평형 미분방정식 고속 벡터 연산
-        P_pa = P_pa_max * (1.0 - np.exp(-time_array * decay_rate))
+        # 포화 평형 미분방정식 동적 벡터 연산
+        P_pa = P_pa_max * (1.0 - np.exp(-time_array * dynamic_decay_rate))
         P_torr = P_pa * self.TORR_CONV
         
-        # 메모리 재할당 최소화를 위한 단일 매트릭스 뷰 생성 마감
         return pd.DataFrame({
             'Time_ms': time_array * 1000.0,
             'Pressure_Pa': P_pa,
             'Pressure_Torr': P_torr
         })
+
 
 
       def generate_verification_plot_base64(self, df_sim: pd.DataFrame, target_p_steady: float = 5.17e-5) -> str:
