@@ -32,7 +32,8 @@ class DFRHomeostasisSolver:
         R_wall: float = 0.30, 
         S_vac: float = 45.0, 
         T_vapor: float = 573.15, 
-        epsilon_eff: float = 1e-11
+        epsilon_eff: float = 1e-11,
+        pump_efficiency: float = 0.5        # 📌 구조 개선: 하드웨어 명세 칩셋 정의부로 격상
     ) -> None:
         self.T_plasma = T_plasma
         self.r_packet = r_packet
@@ -41,6 +42,7 @@ class DFRHomeostasisSolver:
         self.S_vac = S_vac
         self.T_vapor = T_vapor
         self.epsilon_eff = epsilon_eff
+        self.pump_efficiency = pump_efficiency  # 📌 인스턴스 불변 변수 바인딩 완성
 
     def calculate_steady_state_flux(self) -> float:
         """슈테판-볼츠만 복사 에너지 플럭스로부터 기화 질량 플럭스(J_v)를 도출합니다."""
@@ -49,12 +51,12 @@ class DFRHomeostasisSolver:
         q_rad = self.epsilon_eff * self.SIGMA * (self.T_plasma ** 4) * geometry_ratio
         return q_rad / self.H_VAP
 
-       def run_simulation(self, t_max: float = 0.1, num_points: int = 200, pump_efficiency: float = 0.5) -> pd.DataFrame:
+    def run_simulation(self, t_max: float = 0.1, num_points: int = 200) -> pd.DataFrame:
         """
         시간 도메인 동적 포화 평형 시뮬레이션을 수행하고 고속 데이터프레임을 사출합니다.
         
-        📌 지수부 변수화 완료: 하드코딩된 감쇄율(decay_rate)을 소멸시키고, 
-        도관의 기하학적 체적(V)과 진공 펌프 배기 속도(S_vac) 간의 동역학적 시정수로 자동 유도합니다.
+        📌 정렬 및 구조 최적화 완료: 들여쓰기 버그를 수정하고 메서드 인자 대신 
+        하드웨어 바인딩 변수인 self.pump_efficiency를 안전하게 자동 추종합니다.
         """
         J_v = self.calculate_steady_state_flux()
         time_array = np.linspace(0.0, t_max, num_points)
@@ -63,8 +65,8 @@ class DFRHomeostasisSolver:
         conduit_volume = np.pi * (self.R_wall ** 2) * 1.0
         
         # 2. 진공 배기 동역학에 따른 이론적 지수 감쇄 시정수 유도 (decay_rate = S_vac / V)
-        # 실효 흡입 유체 저항 효율(pump_efficiency)을 반영하여 물리적 결속 마감
-        dynamic_decay_rate = (self.S_vac / conduit_volume) * pump_efficiency
+        # 📌 인스턴스 필드(self.pump_efficiency)와 연동하여 물리적 무결성 결속 마감
+        dynamic_decay_rate = (self.S_vac / conduit_volume) * self.pump_efficiency
         
         # 이상기체-배기 진공 이득(Gain) 및 최대 포화 압력 Pa 계산
         ideal_gas_vacuum_gain = (self.A_wall * self.R_GAS * self.T_vapor) / (self.M_LI * self.S_vac)
