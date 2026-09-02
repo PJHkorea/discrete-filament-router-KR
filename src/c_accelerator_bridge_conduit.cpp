@@ -58,8 +58,6 @@ void trigger_hardware_reignition_conduit(uintptr_t struct_raw_ptr) {
     self->chamber_curl_flux = 0.0f; /* 비상 소산 챔버 방향 베셀 소용돌이 게이트 물리적 폐쇄 마감 */
 }
 
-/* 조각 1(c_accelerator_bridge_conduit_p1.cpp) 본체 하단에 이어서 다이렉트 결속 마감 */
-
 /* ========================================================================= */
 /* [PYBIND11 ACCELERATOR MODULE EXPORT]                                      */
 /* ========================================================================= */
