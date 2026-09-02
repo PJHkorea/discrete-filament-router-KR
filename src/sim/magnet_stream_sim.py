@@ -12,7 +12,7 @@ import random
 import math
 from typing import List, Dict
 
-# 우리가 완성한 상위 계층 핵심 비동기 복구 및 인지 조절 아키텍처 커널 로드
+# 상위 계층 핵심 비동기 복구 및 인지 조절 아키텍처 커널 로드
 from dfr_post_flush_orchestrator import DFRAperiodicPostFlushOrchestrator
 from dfr_macro_cognitive_dial import DFRMacroCognitiveDialTower
 
@@ -31,7 +31,6 @@ class MockLayer12HardwareConduit:
         self.hardware_address = (base_addr + (sector_id * 32)) & 0xFFFFFFFFFFFF # strict 32바이트 정렬 메모리 매핑 모사
         
         # UnifiedMagnetRegister32 하드웨어 레지스터 필드 구조체 1:1 모사 미러링 Buffer
-        # 🛡️ 버그 수정: 파이썬 인터프리터 런타임 크래시를 유발하는 플로트 리터럴 Suffix 'f' 완전 제거 (1.0f -> 1.0, 0.0f -> 0.0)
         self.main_z_flux = 1.0 if is_chamber_node == 0 else 0.0 # 평시 기저선 정규화 값 [1.0]
         self.chamber_curl_flux = 0.0
         self.fail_counter = 0
@@ -43,7 +42,6 @@ class MockLayer12HardwareConduit:
         @brief C-C++ 기반의 마스터 제어 커널(unified_magnet_master_process)의 하드와이어드 연산 로직을 에뮬레이션
         """
         # 1. 아노말리 탐지 및 비상 상태 비분기(Branchless MUX) 판별
-        # 🛡️ 버그 수정: 파이썬 문법 에러 유발 인자 '-99.0f'를 표준 실수형 '-99.0'으로 치환 완료
         is_dead = (upstream_signal == -99.0)
         
         if is_dead:
@@ -63,12 +61,10 @@ class MockLayer12HardwareConduit:
         if self.is_emergency_on == 1:
             if self.is_chamber_node == 0:
                 # [일반 구간 자석 모드]: 무분기 전속 직진 가속으로 후방 플러시 청소 압력 형성 (1.5 규격화 완료)
-                # 🛡️ 버그 수정: 파이썬 구문 오류 유발 접미사 '1.5f', '0.0f' 제거
                 self.main_z_flux = 1.5
                 self.chamber_curl_flux = 0.0
             else:
                 # [챔버 직전 Y자 분기 노드]: 직진 자력 차단(0.0 가상 격벽) + 대각 탈출축 자석 세트 역방향 2배 폭발 가동을 통한 관성 유도 사출 선로 형성
-                # 🛡️ 버그 수정: 파이썬 구문 오류 유발 접미사 '0.0f', '2.0f' 제거
                 self.main_z_flux = 0.0
                 self.chamber_curl_flux = -curl_pred * 2.0
         else:
@@ -130,7 +126,6 @@ class DFRDigitalTwinSimulator:
         
         # 모의 타겟 주행 패킷 발생기 환경 변수 설정
         self.sim_clock_tick = 0
-        # 🛡️ 버그 수정: 주석 내부 리터럴 Suffix 'f' 규격 동기화 정리 완료
         self.packet_stream: List[float] = [1.0] * 16 # 평시 정상 전하 스트림 기저선 상태 [1.0]
 
     async def run_unified_simulation_pipeline(self):
@@ -165,7 +160,6 @@ class DFRDigitalTwinSimulator:
                 # ---------------------------------------------------------------------
                 if step == 10:
                     print("\n🔥 [CRITICAL ALARM] 🚨 임의 비상 시나리오 인젝션: Sector 6번 배관 국소 파손 단선 유도!")
-                    # 🛡️ 버그 수정: 구문 오류 유발 접미사 'f' 제거
                     self.packet_stream[6] = -99.0 # 사망 토큰 강제 와이어 사출 주입
                 
                 # 16개 분산 그리드 섹터 파이프라인 연쇄 바톤 터치 주행 가동 에뮬레이션
@@ -182,10 +176,8 @@ class DFRDigitalTwinSimulator:
                     # Layer 3 오케스트레이터의 가동 처리에 의해 하부 레지스터 덮어쓰기가 완료되었는지 역감지
                     if node.is_emergency_on == 1:
                         if node.is_chamber_node == 0:
-                            # 🛡️ 버그 수정: 로그 출력 문자열 내 리터럴 표현 정돈 ('1.5f' -> '1.5')
                             print(f"  ➔ [L1 Sector {s}] 비상 가속 록인 작동 중 ➔ 포트1(main_z) = 1.5 규격화 가속 사출 중!")
                         else:
-                            # 🛡️ 버그 수정: 로그 출력 문자열 내 리터럴 표현 정돈 ('0.0f' -> '0.0')
                             print(f"  ➔ [L1 Sector {s} 🛡️ 챔버] 직진 차단 완료(0.0) ➔ 포트2(curl_gate) 소용돌이 게이트 최대 개방!")
                     
                     # Layer 3 오케스트레이터가 물리 주소를 격파하여 재점화(Re-ignition) 포맷팅을 집행했는지 체크
@@ -196,7 +188,6 @@ class DFRDigitalTwinSimulator:
                 # Level 3 오케스트레이터 인터페이스로 현재 하드웨어 BAR 메모리 버퍼의 신호 상태를 실시간 오프로드
                 # (실전 환경에서는 PCIe DMA 및 Layer 2 extract_magnet_flux_buffer에 의해 0ns 카피프리로 올라갑니다)
                 for s in range(16):
-                    # 🛡️ 버그 수정: 구문 오류 유발 접미사 'f' 제거 및 논리 매핑 일치화
                     if self.packet_stream[s] == -99.0 or self.hardware_sectors[s].main_z_flux == 1.5:
                         # 비상 전하 로그 발생 시 L3 인터럽트 핀 파일 디스크립터 트리거 통보
                         self.orchestrator_l3.report_magnet_interrupt_event(sector_id=s, marker_signal=self.packet_stream[s])
@@ -211,7 +202,6 @@ class DFRDigitalTwinSimulator:
                         # 📌 Downstream Driver 복구 연동 집행: 상위의 명령을 받아 실제 가상 물리 소자 강제 초기화 마감
                         self.hardware_sectors[s].is_emergency_on = 0
                         self.hardware_sectors[s].fail_counter = 0
-                        # 🛡️ 버그 수정: 파이썬 구문 에러를 유발하는 C++ 리터럴 Suffix 'f' 완전 제거 및 표준 실수형 치환
                         self.hardware_sectors[s].main_z_flux = 1.0
                         self.hardware_sectors[s].chamber_curl_flux = 0.0
                         self.packet_stream[s] = 1.0
