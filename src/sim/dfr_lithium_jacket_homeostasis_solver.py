@@ -11,11 +11,18 @@
 """
 
 
+import sys
 import io
 import base64
 import unittest
 import numpy as np
 import pandas as pd
+import matplotlib
+
+# 📌 고도화: 터미널 인자에 '--plot'이 없으면 GUI 없는 무인(Headless) 환경으로 간주하여 백엔드 충돌 방지
+if '__main__' in __name__ and '--plot' not in sys.argv:
+    matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 from typing import Final, Optional
 
@@ -28,6 +35,9 @@ class DFRHomeostasisSolver:
     H_VAP: Final[float] = 19.6e6            # Lithium Latent heat of vaporization (J/kg)
     R_GAS: Final[float] = 8.314             # Universal gas constant (J/mol*K)
     TORR_CONV: Final[float] = 0.00750062    # Pa to Torr conversion factor
+    
+    # 📌 고도화: 테스트 스위트와 CLI 가시화 모듈이 단일 소스로 추종할 설계 목표 정상상태 압력 상수 내장
+    TARGET_P_STEADY: Final[float] = 5.17e-5  # Target P_steady (Torr)
 
     def __init__(
         self, 
@@ -100,16 +110,19 @@ class DFRHomeostasisSolver:
 
 
 
-         def generate_verification_plot_base64(
+            def generate_verification_plot_base64(
         self, 
         df_sim: pd.DataFrame, 
-        target_p_steady: float = 5.17e-5,
+        target_p_steady: Optional[float] = None,  # 📌 고도화: 내장 상수를 기본값으로 추종하도록 유연화
         current_efficiency: Optional[float] = None  # 📌 가변 스캔 라벨링을 위한 인자 추가
     ) -> str:
         """에듀그래프 바이오플레이트 규격을 만족하는 시각화 PNG 스트림을 Base64 포맷으로 인코딩하여 반환합니다."""
         
         # 백엔드 서버 가동 시 전역 상태 전착 및 메모리 누수(Memory Leak)를 차단하기 위한 서브 플롯 격리 구조
         fig, ax = plt.subplots(figsize=(7, 4))
+        
+        # 📌 가든 설정 분기 처리
+        active_target = target_p_steady if target_p_steady is not None else self.TARGET_P_STEADY
         
         try:
             # 📌 효율 변수 값 가변 추적 후 동적 라벨 생성
@@ -118,7 +131,7 @@ class DFRHomeostasisSolver:
             
             # 동적 증기압 곡선 및 타겟 임계선 맵핑
             ax.plot(df_sim['Time_ms'], df_sim['Pressure_Torr'], color='#7C3AED', linewidth=2.5, label=curve_label)
-            ax.axhline(y=target_p_steady, color='#EF4444', linestyle='--', linewidth=1.5, label=f'Target P_steady ({target_p_steady:.2e} Torr)')
+            ax.axhline(y=active_target, color='#EF4444', linestyle='--', linewidth=1.5, label=f'Target P_steady ({active_target:.2e} Torr)')
             
             # 레이텍(LaTeX) 수학 도메인 폰트 렌더링 유지 및 스타일 프로파일 정착
             ax.set_title(r'$\mathrm{DFR\ Vapor\ Jacket\ Homeostasis\ Convergence\ Verification}$', fontsize=12, pad=10)
@@ -142,6 +155,15 @@ class DFRHomeostasisSolver:
             # matplotlib GUI 메모리 리소스를 즉각 강제 소멸하여 누수 방지
             plt.close(fig)
 
+
+   class TestDFRHomeostasisSimulation(unittest.TestCase):
+    """DFR 리튬 기체 자켓의 물리학적 가드레일 및 정합성을 검증하는 자동화 회귀 테스트 스위트"""
+
+    def setUp(self) -> None:
+        """개별 테스트 샌드박스가 구동되기 전 수치해석 솔버 인스턴스를 초기화합니다."""
+        self.solver = DFRHomeostasisSolver()
+        # 단일 진실 공급원(Single Source of Truth)을 엔진 상수로부터 직접 상속
+        self.TARGET_P_STEADY = self.solver.TARGET_P_STEADY
 
     def test_steady_state_pressure_convergence(self) -> None:
         """
@@ -171,8 +193,8 @@ class DFRHomeostasisSolver:
                     msg=f"[Failure @ eff={eff}] 최종 수렴 압력 {final_pressure_torr} Torr가 허용 마진을 초과함."
                 )
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # 📌  [다중물리 동기 결합 검증 메서드] 추가결합
+      # ──────────────────────────────────────────────────────────────────────────
+    # 📌 [다중물리 동기 결합 검증 메서드] 추가결합 및 고도화
     # ──────────────────────────────────────────────────────────────────────────
     def test_frequency_modulation_co_locking_attenuation(self) -> None:
         """
@@ -193,14 +215,14 @@ class DFRHomeostasisSolver:
                 # 3. 주파수 변조율 역산
                 eta = freq / 15000.0
                 
-                # 4. 50Hz 자석 클록 진행파와의 시공간 변환 매핑 비율 계산 (R 소산비율)
-                r_소산비율 = freq / 50.0
+                # 📌 4. 고도화: PEP 8 규격을 준수하고 C++ 하드웨어 핀 가드 연동 가독성을 위한 영문 변수명 치환
+                r_dissipation_ratio = freq / 50.0
                 
                 # 5. 파데 유리함수 필터를 통과한 리튬 자켓의 동적 미시 열전도 감쇄율 연산
                 kappa_eff = k_0 / (1.0 + beta_coupling * (eta ** 2))
                 
                 # 6. 반경 30cm 도관 단면과 10-20cm 관성 주행 구간을 거쳐 외벽에 도달하는 최종 전열량 산출
-                q_wall_conduction = (q_plasma_core * kappa_eff) / r_소산비율
+                q_wall_conduction = (q_plasma_core * kappa_eff) / r_dissipation_ratio
                 
                 # 📌 [최종 정합성 판정 기각 마진 스캔]
                 # 주파수가 가변되어도 Co-locking 단열 장벽과 연산 소산비율 덕분에 
@@ -211,7 +233,7 @@ class DFRHomeostasisSolver:
                     msg=f"CRITICAL: 주파수 {freq:.1f}Hz 주행 중 단열 결합 붕괴! 외벽 열부하({q_wall_conduction:.2f}W)가 마진을 초과했습니다."
                 )
 
-    def test_knudsen_number_regime(self) -> None:
+        def test_knudsen_number_regime(self) -> None:
         """
         [물리 가이드라인 검증] Knudsen Number (Kn) 사후 해석 테스트:
         최종 수렴 압력 대역이 진공 배기 공식(S_vac)의 전제 조건인 '분자류 또는 천이류 영역'에 존재하는지 전수 검증합니다.
@@ -250,9 +272,12 @@ class DFRHomeostasisSolver:
                     msg=f"[물리 정합성 결함 @ eff={eff}] 현재 수렴 압력에서의 크누센 수({knudsen_number:.4f})가 너무 낮아 "
                         f"점성 유체 전이 영역으로 빠졌습니다. 진공 컨덕턴스 공식을 고차원으로 개정해야 합니다."
                 )
-        print(f"\n➔ 🔍 [Physics Guard] 정상상태 크누센 수(Kn) = {knudsen_number:.2f} (확보 완료: 자유분자류 대역 충족)")
+                
+                # 📌 고도화: 루프 내부에서 각 시나리오별 수렴 검증 로그가 명확히 개별 추적되도록 출력 블록 격리화
+                sys.stdout.write(f"\n ➔ 🔍 [Physics Guard @ eff={eff:.1f}] 정상상태 크누센 수(Kn) = {knudsen_number:.2f} (확보 완료)")
 
-    def test_sound_speed_propagation_delay(self) -> None:
+
+      def test_sound_speed_propagation_delay(self) -> None:
         """
         [시간 마진 검증] 열역학적 음속 전파 지연 마진 테스트:
         0D 볼륨 모델의 항상성 수렴 시간(50ms)이 실제 기체가 공간을 음속으로 채우는 최소 물리 시간보다 큰지 검증합니다.
@@ -275,7 +300,9 @@ class DFRHomeostasisSolver:
             msg=f"[시간 정합성 모순] 물리적 음속 전파 지연 시간({min_propagation_delay_ms:.2f} ms)이 "
                 f"모델의 50ms 안착 가정보다 길어 시공간 인과율 모순이 발생했습니다."
         )
-        print(f"➔ ⏱️ [Time Guard] 리튬 열역학적 음속 = {sound_speed:.2f} m/s | 최소 전파 지연 = {min_propagation_delay_ms:.2f} ms (안전 마진 확보)")
+        
+        # 📌 고도화: 표준 출력 인터페이스 동기화를 통한 CI/CD 가시성 정돈
+        sys.stdout.write(f"\n ➔ ⏱️ [Time Guard] 리튬 열역학적 음속 = {sound_speed:.2f} m/s | 최소 전파 지연 = {min_propagation_delay_ms:.2f} ms (안전 마진 확보)")
 
     def test_pressure_is_monotonically_increasing(self) -> None:
         """
@@ -295,7 +322,7 @@ class DFRHomeostasisSolver:
                     f"[Failure @ eff={eff}] 열역학에 반하는 압력 감소 역류 구간이 감지됨."
                 )
 
-    def test_output_visualization_generation(self) -> None:
+      def test_output_visualization_generation(self) -> None:
         """
         인프라 테스트: 자율 디지털 트윈 리포트 인코딩 스트림 사출 모듈이 각 효율 조건별로 예외 없이 Base64를 출력하는지 검증합니다.
         """
@@ -305,10 +332,10 @@ class DFRHomeostasisSolver:
             with self.subTest(pump_efficiency=eff):
                 df_result = self.solver.run_simulation(pump_efficiency_override=eff)
                 
-                # 시각화 모듈에도 오버라이드 효율 값을 전달하여 범례 라벨 자동 동기화
+                # 📌 앞서 리팩토링한 엔진 내장 상수를 추종하도록 target_p_steady 인자 전달을 생략(또는 None 처리)하여 결합도 완화
                 img_stream = self.solver.generate_verification_plot_base64(
                     df_result, 
-                    target_p_steady=self.TARGET_P_STEADY,
+                    target_p_steady=None,
                     current_efficiency=eff
                 )
                 
@@ -319,18 +346,19 @@ class DFRHomeostasisSolver:
 
 
 # =====================================================================
-# 3.  최종 결속: 단점을 극복하는 하이브리드 CLI 엔트리 포인트 (Execution Control)
+# 3. 최종 결속: 하이브리드 CLI 엔트리 포인트 (Execution Control)
 # =====================================================================
- if __name__ == '__main__':
+if __name__ == '__main__':
     import sys
     
-    #  코디자인 융합 완결: 터미널 인자에 '--plot'이 수신되면 로컬 GUI 디스플레이 모드로 즉각 스왑
+    # 📌 코디자인 융합 완결: 터미널 인자에 '--plot'이 수신되면 로컬 GUI 디스플레이 모드로 즉각 스왑
     if '--plot' in sys.argv:
-        print("\n🌐 [DFR Digital Twin] 로컬 GUI 가시화 필터 모드를 트리거합니다.")
+        print("\n 🌐 [DFR Digital Twin] 로컬 GUI 가시화 필터 모드를 트리거합니다.")
         
         # 1. 단일 물리 해석 인스턴스 셋팅
         solver = DFRHomeostasisSolver()
-        target_p_steady = 5.17e-5  # 설계 가설 목표선
+        # 📌 고도화: 엔진 내부의 단일 진실 공급원(TARGET_P_STEADY)을 동적 상속하여 파편화 제거
+        target_p_steady = solver.TARGET_P_STEADY
         
         # 2. 다차원 동적 시뮬레이션 전수 스캔 플롯 구성
         # 최악의 정체 상황(0.1), 기저 운전선(0.5), 이상적 배기(1.0)를 시각적으로 전격 비교
@@ -371,11 +399,17 @@ class DFRHomeostasisSolver:
         plt.legend(loc='lower right', fontsize=9)
         plt.tight_layout()
         
+        # 📌 고도화: 분석 리포트 자동 아카이빙을 위한 고해상도 오프라인 이미지 파일 사출
+        output_filename = 'dfr_homeostasis_sweep.png'
+        plt.savefig(output_filename, dpi=300, bbox_inches='tight')
+        print(f"➔ 💾 [Archive] 고해상도 시뮬레이션 플롯 파일 저장 완료: {output_filename}")
+        
         print("➔ 📊 [Matplotlib Engine] 다중 효율 프로파일 플롯 컨벌전스 렌더링 완료. GUI 윈도우를 출력합니다.")
         plt.show()
         
     else:
         # 일반 실행 또는 GitHub Actions CI/CD 환경에서는 표준 unittest 패키지 조용히 작동 (OK 아웃풋 사출)
         print("\n⚙️ [CI/CD Pipeline] 하이브리드 유효성 회귀 테스트 스위트를 구동합니다.")
+        # 📌 버그 수정 완결: 클래스 분리 아키텍처 도입으로 unittest.main()이 유효성 검증 타겟만 안전하게 자동 헌팅합니다.
         unittest.main()
 
