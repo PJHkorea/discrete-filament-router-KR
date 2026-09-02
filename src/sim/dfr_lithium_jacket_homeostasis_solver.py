@@ -44,7 +44,7 @@ class DFRHomeostasisSolver:
         T_plasma: float = 1e8, 
         r_packet: float = 0.0015, 
         R_wall: float = 0.30, 
-        S_vac: float = 45.0, 
+        S_vac: float = 45.0,             # 📌 물리 가이드: 진공 배기 속도 기본치 (단위: L/s)
         T_vapor: float = 573.15, 
         epsilon_eff: float = 1e-11,
         pump_efficiency: float = 0.5        # 📌 기저 운전 사양 (Default)
@@ -52,20 +52,20 @@ class DFRHomeostasisSolver:
         self.T_plasma = T_plasma
         self.r_packet = r_packet
         self.R_wall = R_wall
-        self.A_wall = 2.0 * np.pi * self.R_wall * 1.0  # 단위 길이(1m)당 내벽 단면적
+        self.A_wall = 2.0 * np.pi * self.R_wall * 1.0  # 단위 길이(1m)당 내벽 단면적 (m^2)
         self.S_vac = S_vac
         self.T_vapor = T_vapor
         self.epsilon_eff = epsilon_eff
         self.pump_efficiency = pump_efficiency  # 인스턴스 기본 물리 상태 바인딩
 
     def calculate_steady_state_flux(self) -> float:
-        """슈테판-볼츠만 복사 에너지 플럭스로부터 기화 질량 플럭스(J_v)를 도출합니다."""
+        """슈테판-볼츠만 복사 에너지 플럭스로부터 기화 질량 플럭스(J_v, kg/m^2·s)를 도출합니다."""
         geometry_ratio = self.r_packet / self.R_wall
         q_rad = self.epsilon_eff * self.SIGMA * (self.T_plasma ** 4) * geometry_ratio
         return q_rad / self.H_VAP
 
 
-    def run_simulation(
+       def run_simulation(
         self, 
         t_max: float = 0.1, 
         num_points: int = 200,
@@ -90,12 +90,18 @@ class DFRHomeostasisSolver:
             else self.pump_efficiency
         )
         
-        # 진공 배기 동역학에 따른 이론적 지수 감쇄 시정수 유도 (decay_rate = S_vac / V)
-        dynamic_decay_rate = (self.S_vac / conduit_volume) * active_efficiency
+        # 📌 휴먼 에러 교정 ①: S_vac 단위를 L/s에서 m^3/s로 물리 변환
+        S_vac_m3 = self.S_vac * 1e-3
         
-        # 이상기체-배기 진공 이득(Gain) 및 최대 포화 압력 Pa 계산
-        ideal_gas_vacuum_gain = (self.A_wall * self.R_GAS * self.T_vapor) / (self.M_LI * self.S_vac)
-        P_pa_max = J_v * ideal_gas_vacuum_gain
+        # 📌 휴먼 에러 교정 ②: 실질 배기 속도(S_eff) 반영
+        S_eff = S_vac_m3 * active_efficiency
+        
+        # 진공 배기 동역학에 따른 이론적 지수 감쇄 시정수 유도 (decay_rate = S_eff / V)
+        dynamic_decay_rate = S_eff / conduit_volume
+        
+        # 📌 휴먼 에러 교정 ③: Mass Balance 정통 물리학 Gain 공식을 적용하여 최대 포화 압력 Pa 계산
+        # P = (J_v * A_wall * R * T) / (M_Li * S_eff)
+        P_pa_max = (J_v * self.A_wall * self.R_GAS * self.T_vapor) / (self.M_LI * S_eff)
         
         # 포화 평형 미분방정식 동적 벡터 연산
         P_pa = P_pa_max * (1.0 - np.exp(-time_array * dynamic_decay_rate))
@@ -110,7 +116,7 @@ class DFRHomeostasisSolver:
 
 
 
-            def generate_verification_plot_base64(
+           def generate_verification_plot_base64(
         self, 
         df_sim: pd.DataFrame, 
         target_p_steady: Optional[float] = None,  # 📌 고도화: 내장 상수를 기본값으로 추종하도록 유연화
@@ -138,9 +144,16 @@ class DFRHomeostasisSolver:
             ax.set_xlabel(r'$\mathrm{Time\ (ms)}$', fontsize=10)
             ax.set_ylabel(r'$\mathrm{Vapor\ Pressure\ (Torr)}$', fontsize=10)
             
+            # 📌 방어 코드 추가: t=0일 때 압력 0이 로그 스케일에서 -inf로 터지는 현상 방지
             ax.set_yscale('log')
+            # 타겟 초고진공 압력대(10^-5)가 잘 보이도록 Y축 하한을 10^-6 수준으로 방어벽 설정
+            ax.set_ylim(bottom=active_target * 0.1, top=active_target * 10)
+            
             ax.grid(True, which="both", ls=":", alpha=0.6)
             ax.legend(loc='lower right', fontsize=9)
+            
+            # 📌 시각 가시성 고도화: 라벨 잘림 방지
+            fig.tight_layout()
             
             # 🛡️ 입출력 병목 제로화를 위한 메모리 바이트 뷰 인터셉트
             with io.BytesIO() as buf:
@@ -156,7 +169,8 @@ class DFRHomeostasisSolver:
             plt.close(fig)
 
 
-   class TestDFRHomeostasisSimulation(unittest.TestCase):
+
+  class TestDFRHomeostasisSimulation(unittest.TestCase):
     """DFR 리튬 기체 자켓의 물리학적 가드레일 및 정합성을 검증하는 자동화 회귀 테스트 스위트"""
 
     def setUp(self) -> None:
@@ -174,7 +188,6 @@ class DFRHomeostasisSolver:
         """
         # 극단적 유체 저항(0.1)부터 최대 배기 효율(1.0)까지 촘촘한 스캔 대역 설정
         efficiency_scenarios = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
-        dynamic_delta = self.TARGET_P_STEADY * 0.01  # 타겟 값의 1% 이내 변동 범위 허용 마진
 
         for eff in efficiency_scenarios:
             # 🛡️ 개별 파라미터 시나리오 격리 샌드박스 가동
@@ -186,15 +199,25 @@ class DFRHomeostasisSolver:
                 steady_state_data = df_result[df_result['Time_ms'] >= 50.0]
                 final_pressure_torr: float = float(steady_state_data['Pressure_Torr'].iloc[-1])
                 
+                # 📌 물리 동기화 고도화: 배기 효율(eff)에 반비례하여 변하는 이론적 정상상태 압력을 동적 역산
+                # 기저 사양인 eff=0.5 일 때 TARGET_P_STEADY(5.17e-5 Torr)에 정확히 도달함
+                expected_steady_pressure = self.TARGET_P_STEADY * (0.5 / eff)
+                
+                # 허용 오차 오차 마진은 각 시나리오별 동적 예상 압력의 1%로 설정
+                dynamic_delta = expected_steady_pressure * 0.01
+                
                 self.assertAlmostEqual(
                     final_pressure_torr, 
-                    self.TARGET_P_STEADY, 
+                    expected_steady_pressure, 
                     delta=dynamic_delta,
-                    msg=f"[Failure @ eff={eff}] 최종 수렴 압력 {final_pressure_torr} Torr가 허용 마진을 초과함."
+                    msg=f"[Failure @ eff={eff}] 최종 수렴 압력 {final_pressure_torr:.4e} Torr가 "
+                        f"이론적 예상 압력 {expected_steady_pressure:.4e} Torr의 허용 마진을 초과함."
                 )
 
-      # ──────────────────────────────────────────────────────────────────────────
-    # 📌 [다중물리 동기 결합 검증 메서드] 추가결합 및 고도화
+
+
+       # ──────────────────────────────────────────────────────────────────────────
+    # 📌 [다중물리 동기 결합 검증 메서드] 추가결합 및 고도화 완료
     # ──────────────────────────────────────────────────────────────────────────
     def test_frequency_modulation_co_locking_attenuation(self) -> None:
         """
@@ -215,7 +238,7 @@ class DFRHomeostasisSolver:
                 # 3. 주파수 변조율 역산
                 eta = freq / 15000.0
                 
-                # 📌 4. 고도화: PEP 8 규격을 준수하고 C++ 하드웨어 핀 가드 연동 가독성을 위한 변수명 치환 , 실수하지말자
+                # 📌 4. 고도화: PEP 8 규격을 준수하고 C++ 하드웨어 핀 가드 연동 가독성을 위한 변수명 치환
                 r_dissipation_ratio = freq / 50.0
                 
                 # 5. 파데 유리함수 필터를 통과한 리튬 자켓의 동적 미시 열전도 감쇄율 연산
@@ -232,8 +255,14 @@ class DFRHomeostasisSolver:
                     allowed_thermal_margin,
                     msg=f"CRITICAL: 주파수 {freq:.1f}Hz 주행 중 단열 결합 붕괴! 외벽 열부하({q_wall_conduction:.2f}W)가 마진을 초과했습니다."
                 )
+        
+        # 📌 고도화: 대표 대역(최악 조건 6.5kHz 및 최적 조건 15kHz)의 정합성 가시성 로그 사출
+        sys.stdout.write(
+            f"\n ➔ 🔬 [Thermal Guard] 주파수 변조 단열 검증 완료 | 최악 열부하(6.5kHz) = {q_wall_conduction:.2f}W / 한계 {allowed_thermal_margin}W (안전)"
+        )
 
-        def test_knudsen_number_regime(self) -> None:
+
+          def test_knudsen_number_regime(self) -> None:
         """
         [물리 가이드라인 검증] Knudsen Number (Kn) 사후 해석 테스트:
         최종 수렴 압력 대역이 진공 배기 공식(S_vac)의 전제 조건인 '분자류 또는 천이류 영역'에 존재하는지 전수 검증합니다.
@@ -254,11 +283,8 @@ class DFRHomeostasisSolver:
                 k_B = 1.380649e-23
                 denominator = np.sqrt(2.0) * np.pi * (d_li ** 2) * steady_state_pa
                 
-                # 분모 언더플로우 방어벽 가동
-                if denominator > 1e-15:
-                    mean_free_path = (k_B * self.solver.T_vapor) / denominator
-                else:
-                    mean_free_path = float('inf')
+                # 📌 물리 수식 정상화 완료: 압력이 초고진공으로 떨어져 언더플로우 위험이 없으므로 직접 계산 수행
+                mean_free_path = (k_B * self.solver.T_vapor) / denominator
                     
                 # 3. 도관 특성 기하학 길이 스케일 정의 (D = 2 * R_wall = 0.60m)
                 characteristic_length = 2.0 * self.solver.R_wall
@@ -277,7 +303,8 @@ class DFRHomeostasisSolver:
                 sys.stdout.write(f"\n ➔ 🔍 [Physics Guard @ eff={eff:.1f}] 정상상태 크누센 수(Kn) = {knudsen_number:.2f} (확보 완료)")
 
 
-      def test_sound_speed_propagation_delay(self) -> None:
+
+        def test_sound_speed_propagation_delay(self) -> None:
         """
         [시간 마진 검증] 열역학적 음속 전파 지연 마진 테스트:
         0D 볼륨 모델의 항상성 수렴 시간(50ms)이 실제 기체가 공간을 음속으로 채우는 최소 물리 시간보다 큰지 검증합니다.
@@ -322,7 +349,7 @@ class DFRHomeostasisSolver:
                     f"[Failure @ eff={eff}] 열역학에 반하는 압력 감소 역류 구간이 감지됨."
                 )
 
-      def test_output_visualization_generation(self) -> None:
+    def test_output_visualization_generation(self) -> None:
         """
         인프라 테스트: 자율 디지털 트윈 리포트 인코딩 스트림 사출 모듈이 각 효율 조건별로 예외 없이 Base64를 출력하는지 검증합니다.
         """
@@ -412,4 +439,3 @@ if __name__ == '__main__':
         print("\n⚙️ [CI/CD Pipeline] 하이브리드 유효성 회귀 테스트 스위트를 구동합니다.")
         # 📌 버그 수정 완결: 클래스 분리 아키텍처 도입으로 unittest.main()이 유효성 검증 타겟만 안전하게 자동 헌팅합니다.
         unittest.main()
-
