@@ -174,6 +174,72 @@ class TestDFRLithiumJacketHomeostasis(unittest.TestCase):
                     msg=f"[Failure @ eff={eff}] 최종 수렴 압력 {final_pressure_torr} Torr가 허용 마진을 초과함."
                 )
 
+    def test_knudsen_number_regime(self) -> None:
+        """
+        [물리 가이드라인 검증] Knudsen Number (Kn) 사후 해석 테스트:
+        최종 수렴 압력 대역이 진공 배기 공식(S_vac)의 전제 조건인 '분자류 또는 천이류 영역'에 존재하는지 전수 검증합니다.
+        """
+        efficiency_scenarios = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+        
+        for eff in efficiency_scenarios:
+            with self.subTest(pump_efficiency=eff):
+                df_result = self.solver.run_simulation(pump_efficiency_override=eff)
+                
+                # 50ms 이후 정상상태 영역의 평형 압력 평균치 추출 (Pa 단위)
+                steady_state_pa = df_result[df_result['Time_ms'] >= 50.0]['Pressure_Pa'].mean()
+                
+                # 1. 리튬 단원자 기체 분자 유효 직경 (d_Li_atomic_diameter ≈ 0.31 x 10^-9 m)
+                d_li = 0.31e-9
+                
+                # 2. 고전 열역학 기반 평균자유행로(Mean Free Path, λ) 역산 식 기동
+                k_B = 1.380649e-23
+                denominator = np.sqrt(2.0) * np.pi * (d_li ** 2) * steady_state_pa
+                
+                # 분모 언더플로우 방어벽 가동
+                if denominator > 1e-15:
+                    mean_free_path = (k_B * self.solver.T_vapor) / denominator
+                else:
+                    mean_free_path = float('inf')
+                    
+                # 3. 도관 특성 기하학 길이 스케일 정의 (D = 2 * R_wall = 0.60m)
+                characteristic_length = 2.0 * self.solver.R_wall
+                
+                # 4. Knudsen Number 산출 (Kn = λ / D)
+                knudsen_number = mean_free_path / characteristic_length
+                
+                # 📌 판정 기준 마진: Kn > 0.1 (천이류 및 분자류 영역) 조건을 만족해야 0D 매스 밸런스 공식이 유효함
+                self.assertGreater(
+                    knudsen_number, 0.1,
+                    msg=f"[물리 정합성 결함 @ eff={eff}] 현재 수렴 압력에서의 크누센 수({knudsen_number:.4f})가 너무 낮아 "
+                        f"점성 유체 전이 영역으로 빠졌습니다. 진공 컨덕턴스 공식을 고차원으로 개정해야 합니다."
+                )
+        print(f"\n➔ 🔍 [Physics Guard] 정상상태 크누센 수(Kn) = {knudsen_number:.2f} (확보 완료: 자유분자류 대역 충족)")
+
+    def test_sound_speed_propagation_delay(self) -> None:
+        """
+        [시간 마진 검증] 열역학적 음속 전파 지연 마진 테스트:
+        0D 볼륨 모델의 항상성 수렴 시간(50ms)이 실제 기체가 공간을 음속으로 채우는 최소 물리 시간보다 큰지 검증합니다.
+        """
+        # 1. 리튬 단원자 기체 비열비 (비압축성/단원자 이상기체 γ = 5/3)
+        gamma = 5.0 / 3.0
+        
+        # 2. 리튬 증기 온도에서의 열역학적 음속(Sound Speed) 계산 (v_s = sqrt(gamma * R * T / M_Li))
+        sound_speed = np.sqrt((gamma * self.solver.R_GAS * self.solver.T_vapor) / self.solver.M_LI)
+        
+        # 3. 임계 물리 공간 트랙 길이 가설 정의 (단위 축 길이 L = 1.0m)
+        conduit_length = 1.0
+        
+        # 4. 음속 파동이 공간 경계를 횡단하는 최소 물리 지연 시간 역산 (단위: ms)
+        min_propagation_delay_ms = (conduit_length / sound_speed) * 1000.0
+        
+        # 📌 판정 기준 마진: 항상성 안착 임계 타겟팅 시간인 50.0ms가 최소 파동 지연 시간보다 공간적으로 아득히 커야 함 (CFL 조건 만족)
+        self.assertLess(
+            min_propagation_delay_ms, 50.0,
+            msg=f"[시간 정합성 모순] 물리적 음속 전파 지연 시간({min_propagation_delay_ms:.2f} ms)이 "
+                f"모델의 50ms 안착 가정보다 길어 시공간 인과율 모순이 발생했습니다."
+        )
+        print(f"➔ ⏱️ [Time Guard] 리튬 열역학적 음속 = {sound_speed:.2f} m/s | 최소 전파 지연 = {min_propagation_delay_ms:.2f} ms (안전 마진 확보)")
+
     def test_pressure_is_monotonically_increasing(self) -> None:
         """
         물리 법칙 검증: 가둠 장 내부의 압력이 평형 도달 전까지 물리학적 모순 없이 단조 증가하는지 전수 검증합니다.
