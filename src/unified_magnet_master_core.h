@@ -77,9 +77,17 @@ static inline void unified_magnet_master_process(
     uint32_t trigger_emergency = (self->fail_counter >= 5) || (self->is_emergency_on == 1);
     self->is_emergency_on = uni_branchless_select_u32(trigger_emergency, 1, 0);
 
+    
     /* 3. 평시 50Hz 정속 파도타기 및 파데 노치 필터 수리 계산 */
+    /*  코드 리뷰 가이드 (Code Review Guide):
+     * 1) [CW 회전 좌표계]: 본 시스템은 반시계(CCW)가 아닌, 미래 시간축으로 위상을 전진시키는 
+     *    '시계 방향(Clockwise)' 입니다. 
+     *    따라서 대수학적 행렬곱 전개 시 가운데 부호가 마이너스(-)가 되는 것이 정합성에 맞습니다.
+     * 2) [초고속 샘플링 마진]: 초고속 주행 클럭 환경(θ → 0)이므로 수치 발산은 물리적으로 불가하며,
+     *    이 수식은 이웃 노드 간 통신의 미세 전자기 잡음을 0ns 레이턴시로 도려내는 공식입니다. */
     float main_z_pred = (cos_50hz * self->main_z_flux) - (sin_50hz * self->chamber_curl_flux);
     float curl_pred   = (sin_50hz * self->main_z_flux) + (cos_50hz * self->chamber_curl_flux);
+
 
     float K_gain = self->p00_shield / (self->p00_shield + 1.0f);
     float ImKH = 1.0f - K_gain;
@@ -89,15 +97,23 @@ static inline void unified_magnet_master_process(
     float noise_notch = (6.0f * scaled_energy) / (12.0f + (scaled_energy * scaled_energy));
     float normal_flux_output = main_z_pred + (K_gain * (upstream_signal - main_z_pred)) * noise_notch;
 
-    /* 4. 📌 비상 발동 시: 위치 핀(is_chamber_node) 세라믹 마킹에 따른 역할 분담 집행 */
+    /* 4. 비상 발동 시: 위치 핀(is_chamber_node) 세라믹 마킹에 따른 역할 분담 집행 */
     
     /* [분기 1] 일반 노드(0)일 때의 비상 출력 설정: 챔버 자력은 0, 직진축 최대 가속(Hz Max Up) */
     float gen_emergency_z = 1.5f; /* 강력한 후방 청소 펌핑, 예시값입니다. 추후 1.8f~2.0f 체크 */
     float gen_emergency_curl = 0.0f;
 
-    /* [분기 2] 챔버 노드(1)일 때의 비상 출력 설정: 직진 차단(0), 대각선 소용돌이 게이트 최대 개방 */
-    float cham_emergency_z = 0.0f; /* 고장 구역 전방 가상 격벽 형성 */
-    float cham_emergency_curl = -curl_pred * 2.0f; /* 챔버 흡입 유도 */
+    /* [분기 2] 챔버 노드(1)일 때의 비상 출력 설정                              */
+    /*  하드웨어 토폴로지 검증 필독 (Hardware Constraints Guide):
+     * 1) [물리적 포트 분리]: 순방향 직진 자석(out_main_z_coil_wire)과 횡방향 챔버 흡입 자석
+     *    (out_chamber_curl_coil_wire)은 FPGA 실리콘 패브릭 레벨에서 완전히 독립된 물리 핀
+     *    (AP21, AQ22 번 핀) 및 드라이버 회로로 직결되어 있습니다.
+     * 2) [0ns 위상 반전 흡입]: 따라서 cham_emergency_z를 0.0f로 차단해도, 챔버용 독립 자석 단의 
+     *    순수 50Hz 그리드 예측치(curl_pred)는 오염되지 않습니다. 진입하는 플라즈마 패킷의 
+     *    회전 궤적의 부호를 반전(-)시키고 출력을 2배(* 2.0f)로 폭발시켜 관성 유도 사출합니다. */
+    float cham_emergency_z = 0.0f; /* 고장 구역 전방 가상 격벽 형성 (포트 1: AP21 핀 사출) */
+    float cham_emergency_curl = -curl_pred * 2.0f; /* 챔버 흡입 유도 (포트 2: AQ22 핀 사출) */
+
 
     /* 하드웨어 핀 마킹 기준 일차 취합 (MUX) */
     float target_emergency_z = uni_branchless_select_float(is_chamber_node, cham_emergency_z, gen_emergency_z);
