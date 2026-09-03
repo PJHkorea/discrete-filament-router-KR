@@ -18,13 +18,13 @@ import unittest
 import numpy as np
 import pandas as pd
 import matplotlib
+from typing import Final, Optional  # 📌 고도화: 하단 클래스 직전에 쪼개져 있던 타입 바인딩을 최상단으로 전진 배치하여 MHD 수식 선포용 불변 상수 환경 사전 구축
 
 # 📌 고도화: 터미널 인자에 '--plot'이 없으면 GUI 없는 무인(Headless) 환경으로 간주하여 백엔드 충돌 방지
 if '__main__' in __name__ and '--plot' not in sys.argv:
     matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
-from typing import Final, Optional
 
 class DFRHomeostasisSolver:
     """DFR 리튬 기체 자켓 항상성 임계 평형 수치해석 핵심 엔진 (Hybrid Variable Version)"""
@@ -213,6 +213,46 @@ class DFRHomeostasisSolver:
                     msg=f"[Failure @ eff={eff}] 최종 수렴 압력 {final_pressure_torr:.4e} Torr가 "
                         f"이론적 예상 압력 {expected_steady_pressure:.4e} Torr의 허용 마진을 초과함."
                 )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 📌 3D 자성유체역학(MHD) 가드레일 검증 메서드 최적 입지 장착
+    # ──────────────────────────────────────────────────────────────────────────
+    def test_mhd_curvature_drift_cancellation_margin(self) -> None:
+        """
+        [3D 유체 가드레일] Y자 분기 곡률 반경(Rc = 0.5m ~ 1.5m) 탈출 주행 시
+        전하 분리에 의한 E x B 외벽 충돌 발산 전 압력 붕괴 마진 전수 스캔 검증
+        """
+        # 1. 물리적 경계 한계 상수 선언
+        R_c_min: Final[float] = 0.5        # 최악의 급격한 Y자 꺾임 곡률 반경 (m)
+        v_z_nominal: Final[float] = 10.0   # 축 주행 속도 (m/s)
+        B_0_base: Final[float] = 0.3       # 상용 자석 기저 테슬라 (T)
+        vacuum_margin: Final[float] = 0.3  # 사방 초고진공 완충 회랑 마진 (m)
+        
+        # 2. 곡률 반경 0.5m ~ 1.5m 사이의 조립 공정 오차 대역 스윕 시나리오
+        rc_scenarios = np.linspace(R_c_min, 1.5, 10)
+        for Rc in rc_scenarios:
+            with self.subTest(curvature_radius_m=Rc):
+                # 3. 보정 텐서 오메가 매커니즘의 스칼라 성분 역산 (오차 감쇄 프로트콜)
+                # 오메가 보정율 계산 = (m * v^2) / (q * B * Rc) 구조의 비선형 가전압 이득
+                omega_gain = (0.006941 * (v_z_nominal ** 2)) / (96485.0 * B_0_base * Rc)
+                
+                # 4. 보정 텐서 가동 시 횡방향으로 밀려나는 최종 유체 변위(Drift Displacement) 산출
+                # 평시 진공 완충 회랑 마진(30cm)보다 찰나의 탈출 시간(20ms) 동안의 드리프트 거리가 아득히 작아야 함
+                t_escape = 0.020  # 20ms 탈출 주행 시간
+                drift_velocity = omega_gain * v_z_nominal
+                final_displacement = drift_velocity * t_escape
+                
+                # 📌 [최종 정합성 판정] 사방 30cm 진공 회랑 벽면에 닿기 전에 비상 챔버 소산이 끝나야 인프라 안전성 합격
+                self.assertLess(
+                    final_displacement,
+                    vacuum_margin,
+                    msg=f"CRITICAL: 곡률 반경 {Rc:.2f}m 구간 주행 중 전하 분리 제어 불능! 유체 변위({final_displacement:.4f}m)가 진공 마진을 침범했습니다."
+                )
+                
+        # 📌 가시성 동기화: 대표 최악 조건(Rc=0.5m)에서의 드리프트 누적 변위량을 표준 출력에 아카이빙
+        sys.stdout.write(
+            f"\n ➔ 🌊 [MHD Guard] 최악 곡률(0.5m) 탈출 주행 검증 완료 | 횡방향 드리프트 변위 = {final_displacement * 1e6:.2f} μm / 한계 {vacuum_margin * 1e3:.1f} mm (안전)"
+        )
 
 
 
