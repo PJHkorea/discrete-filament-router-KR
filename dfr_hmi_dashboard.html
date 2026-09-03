@@ -197,21 +197,21 @@
             nodesData.push({ circle, cx, cy });
         }
 
-                // 런타임 제어 주기 타임 슬롯 주행 함수 (1ms 주기의 시공간 시뮬레이션 축소 모사 구동)
+        // 런타임 제어 주기 타임 슬롯 주행 함수 (1ms 주기의 시공간 시뮬레이션 축소 모사 구동)
         function stepExecutionPipeline() {
             clockTick++;
             clockEl.textContent = `SYS_TICK: ${String(clockTick).padStart(5, '0')} ms`;
 
-            // 시나리오 주입: 150ms 시점에 6번 노드 절대 단선 사망 토큰 주입 시뮬레이션 (10배 연장)
-            if (clockTick === 150) {
+            // 시나리오 주입: 15ms 시점에 6번 노드 절대 단선 사망 토큰 주입 시뮬레이션
+            if (clockTick === 15) {
                 sectorStates[6] = "EMERGENCY";
                 valveRatios[6] = 0.0;
                 fluxOutputs[6] = -99.0;
                 plantTemp = 512.5; // 국소 과열 전조 발생
             }
 
-            // 하부 도미노 전파 감시: 6번이 터진 후 사후 오프로드 파이프라인 전역 록인 추종 모사 (10배 연장)
-            if (clockTick > 150 && clockTick < 450) {
+            // 하부 도미노 전파 감시: 6번이 터진 후 사후 오프로드 파이프라인 전역 록인 추종 모사
+            if (clockTick > 15 && clockTick < 45) {
                 for (let s = 6; s < numSectors; s++) {
                     if (sectorStates[s] !== "EMERGENCY") {
                         sectorStates[s] = "FLUSHING";
@@ -221,8 +221,8 @@
                 }
                 gridDemand = 0.5; // 안정 제어 진입을 위한 외부 차단 부하 낙하
             }
-            // Layer 3 오케스트레이터 대기 후 450ms 시점에 원자적 리셋 및 밸브 이완(1.0) 복구 실증 (10배 연장)
-            if (clockTick === 450) {
+            // Layer 3 오케스트레이터 5/decay_rate 대기 후 45ms 시점에 원자적 리셋 및 밸브 이완(1.0) 복구 실증
+            if (clockTick === 45) {
                 for (let s = 6; s < numSectors; s++) {
                     sectorStates[s] = "CLEARED";
                     valveRatios[s] = 1.0;
@@ -232,8 +232,8 @@
                 gridDemand = 0.8;
             }
             
-            // 700ms 시점에 기저 발전 스트림 평시 주행 궤도로 정상 복구 수렴 (10배 연장)
-            if (clockTick === 700) {
+            // 70ms 시점에 기저 발전 스트림 평시 주행 궤도로 정상 복구 수렴
+            if (clockTick === 70) {
                 for (let s = 0; s < numSectors; s++) { 
                     sectorStates[s] = "STEADY"; 
                     fluxOutputs[s] = s === 15 ? 0.0 : 1.0; 
@@ -241,7 +241,7 @@
                 gridDemand = 1.0;
             }
 
-           // 1. 거시 인지 텔레메트리 상단 수치 실시간 연산 (Single Source of Truth)
+            // 1. 거시 인지 텔레메트리 상단 수치 실시간 연산 (Single Source of Truth)
             const totalValve = valveRatios.reduce((a, b) => a + b, 0);
             const avgValveOpen = (totalValve / numSectors) * 100;
 
@@ -283,11 +283,11 @@
                 }
             }
 
-            // 📌 시공간 매핑 과도기 정합성 관측을 위해 1000ms 타임 윈도우까지 루프 자동 재귀 가동 (10배 연장)
-            if (clockTick < 1000) {
-                setTimeout(stepExecutionPipeline, 800); // 👈 기존 80ms에서 800ms로 조절 완료! (10배 지연)
+            // 시공간 매핑 과도기 정합성 관측을 위해 100ms 타임 윈도우까지 루프 자동 재귀 가동
+            if (clockTick < 100) {
+                setTimeout(stepExecutionPipeline, 80); // 오퍼레이터 가시성 확보용 타임 스케일 전개
             } else {
-                console.log("📊 [HMI Telemetry Sync] 1000ms 파이프라인 전 구간 실증 주행 완료. 정상 안착 상태 유지.");
+                console.log("📊 [HMI Telemetry Sync] 100ms 파이프라인 전 구간 실증 주행 완료. 정상 안착 상태 유지.");
             }
         }
 
@@ -296,4 +296,3 @@
     </script>
 </body>
 </html>
-
