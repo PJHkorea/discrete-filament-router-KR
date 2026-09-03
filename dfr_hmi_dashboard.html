@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFR V3 플랜트 자율 항상성 통합 관제 대시보드 (HMI)</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --color-steady: #58a6ff;
+            --color-emergency: #ff7b72;
+            --color-flush: #d29922;
+            --color-recovered: #7eea8e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        header h1 { font-size: 24px; color: #ffffff; }
+        .badge {
+            background: #21262d;
+            border: 1px solid var(--border-color);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+        }
+        .panel h2 { font-size: 18px; margin-bottom: 15px; color: #ffffff; border-left: 4px solid var(--color-steady); padding-left: 10px; }
+        .telemetry-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #21262d;
+        }
+        .telemetry-row:last-child { border-bottom: none; }
+        .value-highlight { font-family: monospace; font-weight: bold; font-size: 16px; color: #ffffff; }
+        .sector-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .sector-card {
+            background: #21262d;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+            font-family: monospace;
+            transition: all 0.2s ease;
+        }
+        .status-steady { border-color: var(--color-steady); color: var(--color-steady); }
+        .status-emergency { border-color: var(--color-emergency); color: var(--color-emergency); animation: pulse 1s infinite alternate; }
+        .status-flush { border-color: var(--color-flush); color: var(--color-flush); }
+        .status-cleared { border-color: var(--color-recovered); color: var(--color-recovered); }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 2px rgba(255,123,114,0.4); }
+            100% { box-shadow: 0 0 12px rgba(255,123,114,0.8); }
+        }
+        
+        .map-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            min-height: 350px;
+        }
+        svg { background: #090d16; border-radius: 50%; box-shadow: inset 0 0 20px rgba(0,0,0,0.6); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>DFR V3 항상성 자율 제어 플랜트 통합 관제소 (HMI)</h1>
+            <p style="color: #8b949e; font-size: 14px; margin-top: 4px;">Layer 1 ~ Layer 4 양방향 텔레메트리 실시간 전산 스캔 피드</p>
+        </div>
+        <div class="badge" id="system-clock-display">SYS_TICK: 00000 ms</div>
+    </header>
+
+    <div class="grid-container">
+        <!-- 좌측 제어 평면: 전역 거시 인지 텔레메트리 판넬 -->
+        <div class="panel">
+            <h2>🧠 거시 인지 상태 평면 (Level 4/3 Telemetry)</h2>
+            <div class="telemetry-row">
+                <span>외부 전력망 수요 계수 (Grid Demand)</span>
+                <span class="value-highlight" id="lbl-grid-demand">100.0 %</span>
+            </div>
+            <div class="telemetry-row">
+                <span>입구 잉크젯 분사 주파수 다이얼 (f_ink)</span>
+                <span class="value-highlight" id="lbl-injection-hz" style="color: #58a6ff;">15,000.0 Hz</span>
+            </div>
+            <div class="telemetry-row">
+                <span>외벽 구리 레이어 전열 평형 온도</span>
+                <span class="value-highlight" id="lbl-plant-temp">500.00 °C</span>
+            </div>
+            <div class="telemetry-row">
+                <span>진공 도관 실질 배기 면적 마진 (&xi;_avg)</span>
+                <span class="value-highlight" id="lbl-avg-valve" style="color: #7eea8e;">100.00 %</span>
+            </div>
+            <div class="telemetry-row">
+                <span>기저 배관 잔류 분압 한계선</span>
+                <span class="value-highlight" style="color: #8b949e;">5.17 &times; 10⁻⁵ Torr (STEADY)</span>
+            </div>
+
+            <h2 style="margin-top: 25px; border-left-color: #ff7b72;">🔩 16개 분산 분할 자석 섹터 상태 매트릭스</h2>
+            <div class="sector-grid" id="ui-sector-grid">
+                <!-- 16개 카드 동적 렌더링 주입구 -->
+            </div>
+        </div>
+
+        <!-- 우측 제어 평면: 200m 원형 루프 유압 진행파 시각화 SVG 맵 -->
+        <div class="panel" style="display: flex; flex-direction: column;">
+            <h2>🎛️ 전 구간 수직 통합 실물 토폴로지 맵 (Layer 1/2 Sync View)</h2>
+            <div class="map-container">
+                <svg width="340" height="340" viewBox="0 0 340 340" id="ui-svg-loop">
+                    <!-- 중앙 초고진공 회랑 마진선 외곽 원 -->
+                    <circle cx="170" cy="170" r="130" fill="none" stroke="#21262d" stroke-width="14"></circle>
+                    <circle cx="170" cy="170" r="105" fill="none" stroke="#0d1117" stroke-dasharray="4 4"></circle>
+                    <!-- 자석 노드 도트 및 링크선 동적 주입 -->
+                </svg>
+            </div>
+            <div style="margin-top: auto; background: #21262d; padding: 12px; border-radius: 4px; font-size: 13px; font-family: monospace;">
+                <span style="color: var(--color-steady)">● STEADY</span> | 
+                <span style="color: var(--color-emergency)">● FAILURE(-99.0f)</span> | 
+                <span style="color: var(--color-flush)">● FLUSHING(1.5f)</span> | 
+                <span style="color: var(--color-recovered)">● CLEARED(1.0f)</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 📌 디지털 트윈 환경 데이터셋 1:1 결속 매핑
+        const numSectors = 16;
+        let clockTick = 0;
+        let sectorStates = Array(numSectors).fill("STEADY");
+        let valveRatios = Array(numSectors).fill(1.0);
+        let fluxOutputs = Array(numSectors).fill(1.0);
+        let plantTemp = 500.0;
+        let gridDemand = 1.0;
+
+        // UI 요소 캐싱
+        const gridEl = document.getElementById("ui-sector-grid");
+        const clockEl = document.getElementById("system-clock-display");
+        const svgEl = document.getElementById("ui-svg-loop");
+
+        // 1. 16개 그리드 카드 구조 초기화 빌드
+        for (let s = 0; s < numSectors; s++) {
+            const card = document.createElement("div");
+            card.id = `card-${s}`;
+            card.className = "sector-card status-steady";
+            card.innerHTML = `<div>SEC ${String(s).padStart(2, '0')}</div><div id="card-flux-${s}" style="font-size:12px; margin-top:4px;">1.00f</div>`;
+            gridEl.appendChild(card);
+        }
+
+        // SVG 상의 16개 자석 노드 좌표 원형 기하학적 매핑 생성
+        const nodesData = [];
+        for (let s = 0; s < numSectors; s++) {
+            const angle = (s * 22.5 * Math.PI) / 180;
+            const cx = 170 + 130 * Math.sin(angle);
+            const cy = 170 - 130 * Math.cos(angle);
+            
+            const circle = document.createElementNS("http://w3.org", "circle");
+            circle.setAttribute("id", `svg-node-${s}`);
+            circle.setAttribute("cx", cx);
+            circle.setAttribute("cy", cy);
+            circle.setAttribute("r", s === 15 ? "9" : "7"); // 15번 특수 챔버 노드는 외경 확장
+            circle.setAttribute("fill", "var(--color-steady)");
+            svgEl.appendChild(circle);
+            nodesData.push({ circle, cx, cy });
+        }
+
+        // 런타임 제어 주기 타임 슬롯 주행 함수 (1ms 주기의 시공간 시뮬레이션 축소 모사 구동)
+        function stepExecutionPipeline() {
+            clockTick++;
+            clockEl.textContent = `SYS_TICK: ${String(clockTick).padStart(5, '0')} ms`;
+
+            // 시나리오 주입: 15ms 시점에 6번 노드 절대 단선 사망 토큰 주입 시뮬레이션
+            if (clockTick === 15) {
+                sectorStates[6] = "EMERGENCY";
+                valveRatios[6] = 0.0;
+                fluxOutputs[6] = -99.0;
+                plantTemp = 512.5; // 국소 과열 전조 발생
+            }
+
+            // 하부 도미노 전파 감시: 6번이 터진 후 사후 오프로드 파이프라인 전역 록인 추종 모사
+            if (clockTick > 15 && clockTick < 45) {
+                for (let s = 6; s < numSectors; s++) {
+                    if (sectorStates[s] !== "EMERGENCY") {
+                        sectorStates[s] = "FLUSHING";
+                        valveRatios[s] = 0.0; // 밸브 완전 폐색 인터록
+                        fluxOutputs[s] = s === 15 ? 0.0 : 1.5; // 일반 노드 1.5f 가속 추진파, 15번 격벽화
+                    }
+                }
+                gridDemand = 0.5; // 안정 제어 진입을 위한 외부 차단 부하 낙하
+            }
+
+            // L3 오케스트레이터 5/decay_rate 대기 후 45ms 시점에 원자적 리셋 및 밸브 이완(1.0) 복구 대성공 실증
+            if (clockTick === 45) {
+                for (let s = 6; s < numSectors; s++) {
+                    sectorStates[s] = "CLEARED";
+                    valveRatios[s] = 1.0;
+                    fluxOutputs[s] = s === 15 ? 0.0 : 1.0;
+                }
+                plantTemp = 500.1;
+                gridDemand = 0.8;
+            }
+            if (clockTick === 70) {
+                for (let s = 0; s < numSectors; s++) { sectorStates[s] = "STEADY"; fluxOutputs[s] = s === 15 ? 0.0 : 1.0; }
+                gridDemand = 1.0;
+            }
+            // [앞선 70ms 기저 발전 스트림 정상 복귀 분기문에서 연속 이어짐]
+            if (clockTick === 70) {
+                for (let s = 0; s < numSectors; s++) { 
+                    sectorStates[s] = "STEADY"; 
+                    fluxOutputs[s] = s === 15 ? 0.0 : 1.0; 
+                }
+                gridDemand = 1.0;
+            }
+
+            // 1. 거시 인지 텔레메트리 상단 수치 실시간 연산 (Single Source of Truth)
+            const totalValve = valveRatios.reduce((a, b) => a + b, 0);
+            const avgValveOpen = (totalValve / numSectors) * 100;
+
+            // Level 4 복합 추론 다이얼링 규칙 엔진 실리콘 매핑 모사
+            let targetHz = 5000.0 + (10000.0 * gridDemand);
+            if (plantTemp > 520.0 || avgValveOpen < 80.0) {
+                targetHz = 5000.0; // 진공 면적 마진 80% 미만 병목 포착 즉시 최소 냉각 주파수 고착
+            }
+
+            // 2. 통제실 HMI 텍스트 필드 0ms 고속 업데이트
+            document.getElementById("lbl-grid-demand").textContent = `${(gridDemand * 100).toFixed(1)} %`;
+            document.getElementById("lbl-injection-hz").textContent = `${targetHz.toLocaleString(undefined, {minimumFractionDigits:1})} Hz`;
+            document.getElementById("lbl-plant-temp").textContent = `${plantTemp.toFixed(2)} °C`;
+            document.getElementById("lbl-avg-valve").textContent = `${avgValveOpen.toFixed(2)} %`;
+
+            // 3. 16개 분산 UI 그리드 카드 및 SVG 노드 색상 매트릭스 동적 동기화 업데이트
+            for (let s = 0; s < numSectors; s++) {
+                const card = document.getElementById(`card-${s}`);
+                const fluxLbl = document.getElementById(`card-flux-${s}`);
+                const state = sectorStates[s];
+
+                // 실시간 전하 플럭스(flux) 뷰 업데이트
+                fluxLbl.textContent = `${fluxOutputs[s].toFixed(2)}f`;
+
+                // 상태별 전력망 가상 격자 및 밸브 차단 인터록 색상 맵 스왑
+                card.className = "sector-card";
+                if (state === "STEADY") {
+                    card.classList.add("status-steady");
+                    nodesData[s].circle.setAttribute("fill", "var(--color-steady)");
+                } else if (state === "EMERGENCY") {
+                    card.classList.add("status-emergency");
+                    nodesData[s].circle.setAttribute("fill", "var(--color-emergency)");
+                } else if (state === "FLUSHING") {
+                    card.classList.add("status-flush");
+                    nodesData[s].circle.setAttribute("fill", "var(--color-flush)");
+                } else if (state === "CLEARED") {
+                    card.classList.add("status-cleared");
+                    nodesData[s].circle.setAttribute("fill", "var(--color-recovered)");
+                }
+            }
+
+            // 시공간 매핑 과도기 정합성 관측을 위해 100ms 타임 윈도우까지 루프 자동 재귀 가동
+            if (clockTick < 100) {
+                setTimeout(stepExecutionPipeline, 80); // 오퍼레이터 가시성 확보용 타임 스케일 전개
+            } else {
+                console.log("📊 [HMI Telemetry Sync] 100ms 파이프라인 전 구간 실증 주행 완료. 정상 안착 상태 유지.");
+            }
+        }
+
+        // 🚀 인프라 대시보드 엔진 1.0초 뒤 자동 기동 점화
+        setTimeout(stepExecutionPipeline, 1000);
+    </script>
+</body>
+</html>
