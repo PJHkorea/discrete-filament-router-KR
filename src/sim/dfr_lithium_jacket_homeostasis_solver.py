@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 import pandas as pd
 import matplotlib
-from typing import Final, Optional  # 📌 고도화: MHD 및 다중물리 텐서 전포용 불변 상수 환경 사전 구축
+from typing import Final, Optional  # 📌 고도화: MHD 및 Throttle 가변 텐서 전포용 불변 상수 환경 사전 구축
 
 # 📌 고도화: 터미널 인자에 '--plot'이 없으면 GUI 없는 무인(Headless) 환경으로 간주하여 백엔드 충돌 방지
 if '__main__' in __name__ and '--plot' not in sys.argv:
@@ -38,6 +38,9 @@ class DFRHomeostasisSolver:
     
     # 📌 고도화: 테스트 스위트와 가시화 플롯이 단일 소스로 추종할 설계 목표 정상상태 압력 상수 내장
     TARGET_P_STEADY: Final[float] = 5.17e-5  # Target P_steady (Torr)
+    
+    # 📌 고도화: 밸브 완전 잠금(0.0) 시 분모가 0이 되어 수치해석적 언더플로우/크래시가 발생하는 것을 차단하기 위한 물리 누설 가드 상수
+    VALVE_EPSILON: Final[float] = 1e-15
 
     def __init__(
         self, 
@@ -47,7 +50,8 @@ class DFRHomeostasisSolver:
         S_vac: float = 45.0,             # 📌 물리 가이드: 진공 배기 속도 기본치 (단위: L/s)
         T_vapor: float = 573.15, 
         epsilon_eff: float = 1e-11,
-        pump_efficiency: float = 0.5        # 📌 기저 운전 사양 (Default)
+        pump_efficiency: float = 0.5,       # 📌 기저 펌프 고유 효율 사양 (Default)
+        valve_open_ratio: float = 1.0       # 📌 기저 운전 사양: 평시 정상 상태 밸브 개도율 기본치 (Default: 100% 완전 개방)
     ) -> None:
         self.T_plasma = T_plasma
         self.r_packet = r_packet
@@ -57,6 +61,7 @@ class DFRHomeostasisSolver:
         self.T_vapor = T_vapor
         self.epsilon_eff = epsilon_eff
         self.pump_efficiency = pump_efficiency  
+        self.valve_open_ratio = valve_open_ratio  # 인스턴스 기본 밸브 개도율 상태 바인딩
         
         # 📌 최적화: 유체 체적 계산을 위한 배기 속도 단위 사전 물리 변환 (L/s -> m^3/s)
         self.S_vac_m3 = self.S_vac * 1e-3
@@ -68,17 +73,19 @@ class DFRHomeostasisSolver:
         return q_rad / self.H_VAP
 
 
-       def run_simulation(
+
+         def run_simulation(
         self, 
         t_max: float = 0.1, 
         num_points: int = 200,
-        pump_efficiency_override: Optional[float] = None  # 📌 가변 스캔을 위한 하이브리드 인자 추가
+        pump_efficiency_override: Optional[float] = None,  # 📌 가변 스캔을 위한 하이브리드 인자 유지
+        valve_open_ratio_override: Optional[float] = None   # 📌 고도화: Throttle 밸브 동적 개도율 조절 매개변수 신설 완료
     ) -> pd.DataFrame:
         """
         시간 도메인 동적 포화 평형 시뮬레이션을 수행하고 고속 데이터프레임을 사출합니다.
         
-        💡 하이브리드 최적화: 인자가 생략되면(None) 인스턴스 기본값(self.pump_efficiency)을 추종하고,
-        인자가 입력되면 해당 값으로 즉각 덮어쓰기(Override)하여 단일 인스턴스 연속 가변 스캔을 지원합니다.
+        💡 하이브리드 코디자인 최적화: 인자가 생략되면 인스턴스 기저값(self.valve_open_ratio)을 추종하고,
+        인자가 주입되면 0ns 만에 실시간 밸브 개도 조절 및 비상 셧다운 프로토콜을 다이렉트 연산합니다.
         """
         J_v = self.calculate_steady_state_flux()
         time_array = np.linspace(0.0, t_max, num_points)
@@ -86,18 +93,27 @@ class DFRHomeostasisSolver:
         # 1. 1D 선형 트랙 도관의 물리적 체적 계산 (V = pi * r^2 * L) [단위 길이 L = 1.0m]
         conduit_volume = np.pi * (self.R_wall ** 2) * 1.0
         
-        # 📌 2. 하이브리드 오버라이딩 적용 연산 지체 분기 처리
+        # 📌 2. 하이브리드 오버라이딩 적용 연산 지체 분기 처리 (이중화 다이얼 파이프라인)
         active_efficiency = (
             pump_efficiency_override 
             if pump_efficiency_override is not None 
             else self.pump_efficiency
         )
         
+        active_valve = (
+            valve_open_ratio_override
+            if valve_open_ratio_override is not None
+            else self.valve_open_ratio
+        )
+        
         # 📌 휴먼 에러 교정 ①: S_vac 단위를 L/s에서 m^3/s로 물리 변환
         S_vac_m3 = self.S_vac * 1e-3
         
-        # 📌 휴먼 에러 교정 ②: 실질 배기 속도(S_eff) 반영
-        S_eff = S_vac_m3 * active_efficiency
+        # 📌 휴먼 에러 교정 ②: 실질 배기 속도(S_eff) 반영 (펌프 성능 및 밸브 개도율 복합 연산)
+        S_eff_base = S_vac_m3 * active_efficiency * active_valve
+        
+        # 🛡️ 핫픽스 완료: 비상 셧다운(개도율 0.0) 시 분모가 0이 되어 수치해석적 크래시가 유발되는 것을 방지하는 제로 디비전 가드
+        S_eff = max(S_eff_base, self.VALVE_EPSILON)
         
         # 진공 배기 동역학에 따른 이론적 지수 감쇄 시정수 유도 (decay_rate = S_eff / V)
         dynamic_decay_rate = S_eff / conduit_volume
@@ -123,7 +139,8 @@ class DFRHomeostasisSolver:
         self, 
         df_sim: pd.DataFrame, 
         target_p_steady: Optional[float] = None,  # 📌 고도화: 내장 상수를 기본값으로 추종하도록 유연화
-        current_efficiency: Optional[float] = None  # 📌 가변 스캔 라벨링을 위한 인자 추가
+        current_efficiency: Optional[float] = None, # 📌 가변 스캔 라벨링을 위한 인자 유지
+        current_valve: Optional[float] = None       # 📌 고도화: Throttle 밸브 동적 개도율 범례 맵핑을 위한 매개변수 추가 결속
     ) -> str:
         """에듀그래프 바이오플레이트 규격을 만족하는 시각화 PNG 스트림을 Base64 포맷으로 인코딩하여 반환합니다."""
         
@@ -134,9 +151,10 @@ class DFRHomeostasisSolver:
         active_target = target_p_steady if target_p_steady is not None else self.TARGET_P_STEADY
         
         try:
-            # 📌 효율 변수 값 가변 추적 후 동적 라벨 생성
+            # 📌 효율 변수 및 밸브 개도율 값 가변 추적 후 동적 복합 라벨 생성
             eff_val = current_efficiency if current_efficiency is not None else self.pump_efficiency
-            curve_label = f'Dynamic Vapor Pressure (eff={eff_val:.2f})'
+            valve_val = current_valve if current_valve is not None else self.valve_open_ratio
+            curve_label = f'Dynamic Vapor Pressure (eff={eff_val:.2f}, valve={valve_val:.2f})'
             
             # 동적 증기압 곡선 및 타겟 임계선 맵핑
             ax.plot(df_sim['Time_ms'], df_sim['Pressure_Torr'], color='#7C3AED', linewidth=2.5, label=curve_label)
@@ -186,36 +204,42 @@ class DFRHomeostasisSolver:
         """
         가설 실증 검증: 50ms 이후 포화 평형에 진입한 증기압이 설계 타겟 오차 마진 이내로 수렴하는지 테스트합니다.
         
-        📌 가변 스캔 적용 완료: self.subTest를 활용하여 단일 인스턴스 환경에서 
-        펌프 효율(0.1 ~ 1.0) 조건별 동적 수렴 정합성을 전수 격파 검증합니다.
+        📌 가변 스캔 적용 고도화: self.subTest를 활용하여 펌프 효율(0.2 ~ 1.0) 및 
+        가변 Throttle 밸브 개도율(0.2 ~ 1.0)의 2차원 교차 복합 스캔 정합성을 전수 검증합니다.
         """
-        # 극단적 유체 저항(0.1)부터 최대 배기 효율(1.0)까지 촘촘한 스캔 대역 설정
-        efficiency_scenarios = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+        # 하드웨어 안정 가동선 범위 내의 복합 2차원 다이얼링 스캔 대역 설정
+        efficiency_scenarios = [0.2, 0.5, 1.0]
+        valve_scenarios = [0.2, 0.5, 1.0]
 
         for eff in efficiency_scenarios:
-            # 🛡️ 개별 파라미터 시나리오 격리 샌드박스 가동
-            with self.subTest(pump_efficiency=eff):
-                # 하이브리드 오버라이딩 인자를 직접 인젝션하여 고속 연산 스왑
-                df_result = self.solver.run_simulation(pump_efficiency_override=eff)
-                
-                # 50ms 이후 정상상태 포화 영역 데이터 필터링
-                steady_state_data = df_result[df_result['Time_ms'] >= 50.0]
-                final_pressure_torr: float = float(steady_state_data['Pressure_Torr'].iloc[-1])
-                
-                # 📌 물리 동기화 고도화: 배기 효율(eff)에 반비례하여 변하는 이론적 정상상태 압력을 동적 역산
-                # 기저 사양인 eff=0.5 일 때 TARGET_P_STEADY(5.17e-5 Torr)에 정확히 도달함
-                expected_steady_pressure = self.TARGET_P_STEADY * (0.5 / eff)
-                
-                # 📌 핫픽스 완료: eff=0.1 영역의 동적 점성 지연 수렴 마진을 수용할 수 있도록 오차 범위를 2%로 최적화
-                dynamic_delta = expected_steady_pressure * 0.02
-                
-                self.assertAlmostEqual(
-                    final_pressure_torr, 
-                    expected_steady_pressure, 
-                    delta=dynamic_delta,
-                    msg=f"[Failure @ eff={eff}] 최종 수렴 압력 {final_pressure_torr:.4e} Torr가 "
-                        f"이론적 예상 압력 {expected_steady_pressure:.4e} Torr의 허용 마진을 초과함."
-                )
+            for valve in valve_scenarios:
+                # 🛡️ 펌프 효율과 밸브 개도율의 이중 파라미터 격리 샌드박스 동시 점화
+                with self.subTest(pump_efficiency=eff, valve_open_ratio=valve):
+                    # 하이브리드 오버라이딩 인자 파이프라인으로 2차원 고속 연산 스왑
+                    df_result = self.solver.run_simulation(
+                        pump_efficiency_override=eff,
+                        valve_open_ratio_override=valve
+                    )
+                    
+                    # 50ms 이후 정상상태 포화 영역 데이터 필터링
+                    steady_state_data = df_result[df_result['Time_ms'] >= 50.0]
+                    final_pressure_torr: float = float(steady_state_data['Pressure_Torr'].iloc[-1])
+                    
+                    # 📌 물리 동기화 고도화: 복합 배기 저항(eff * valve)에 완벽히 반비례하는 이론적 포화 압력 곡선 동적 역산
+                    # 기저 사양인 eff=0.5, valve=1.0 일 때 내장 상수 TARGET_P_STEADY(5.17e-5 Torr)에 정확히 수렴함
+                    expected_steady_pressure = self.TARGET_P_STEADY * (0.5 / (eff * valve))
+                    
+                    # eff * valve 곱이 0.04(최악 정체) 수준까지 조여질 때의 점성 지연 마진을 고려해 수렴성 판정 범위를 2%로 튜닝
+                    dynamic_delta = expected_steady_pressure * 0.02
+                    
+                    self.assertAlmostEqual(
+                        final_pressure_torr, 
+                        expected_steady_pressure, 
+                        delta=dynamic_delta,
+                        msg=f"[Failure @ eff={eff}, valve={valve}] 최종 수렴 압력 {final_pressure_torr:.4e} Torr가 "
+                            f"이론적 예상 압력 {expected_steady_pressure:.4e} Torr의 허용 마진을 초과함."
+                    )
+
 
       # ──────────────────────────────────────────────────────────────────────────
     # 📌 3D 자성유체역학(MHD) 가드레일 검증 메서드 최적 입지 장착
