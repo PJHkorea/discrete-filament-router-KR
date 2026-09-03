@@ -12,19 +12,19 @@
 
 본 구조체의 실시간 자가 안정화와 통합 제어는 하부 실리콘 에지부터 최상위 추론 타워까지 4개 계층의 상하향식 폐루프 체인으로 실행됩니다.
 
-### 🧠 Level 4 (Cognitive Inference): 거시 인지 사령탑 (The Macro-Inference Brain)
+### 🧠 Layer 4 (Cognitive Inference): 거시 인지 사령탑 (The Macro-Inference Brain)
 *   **구조적 요약:** 플랜트 전역의 열역학 상태와 외부 전력망 수요를 패시브하게 관조하며 총출력을 조율하는 하향식 지능형 사령탑.
 *   **제어 집행 (Output):** 배관 과열 또는 진공 흡입 컨덕턴스 병목 포착 즉시 연료 주입 주파수를 최소선(`HZ_MIN`)으로 강하하는 **'자가 안정화 영역(Homeostasis Lock)'** 실시간 집행.
 
-### 👑 Level 3 (Global Orchestration): 자율 복구 오케스트레이터 (The Self-Healing Heart)
+### 👑 Layer 3 (Global Orchestration): 자율 복구 오케스트레이터 (The Self-Healing Heart)
 *   **구조적 요약:** 하부 임베디드 레이어가 오프로드한 결함 토큰을 수신하여 전역 선로의 무결성을 자율 복구하는 비동기 소프트웨어 중추.
 *   **제어 집행 (Output):** 결함 노드 감지 즉시 가상 전력망 마스크 격리 패스 적용 및 하부 칩셋 레지스터 영역을 원자적으로 직접 초기화하여 평시 기저선으로 복구.
 
-### 🏰 Level 2 (Hardware-Software Bridge): 초고속 데이터 도관 (The Zero-Copy Conduit)
+### 🏰 Layer 2 (Hardware-Software Bridge): 초고속 데이터 도관 (The Zero-Copy Conduit)
 *   **구조적 요약:** 최하단 실리콘 레지스터 물리 주소 공간과 상위 오케스트레이션 커널을 지연 시간 없이 상호 연결하는 순수 임베디드 데이터 관로.
 *   **제어 집행 (Output):** 제로카피 0ns 사출 달성 및 밸브 차단 제어 시 나눗셈 연산을 배제하여 실질 진공 소산 속도를 10ns 이내로 무분기 사출.
 
-### ⛓ Level 1 (Hardware Silicon Edge): 결정론적 실리콘 에지 (The Real-Time Gate)
+### ⛓ Layer 1 (Hardware Silicon Edge): 결정론적 실리콘 에지 (The Real-Time Gate)
 *   **구조적 요약:** 가속기 파이프라인 최전방에서 이산 플라즈마 패킷과 전력 반도체 인버터 코일단을 직접 통제하는 최하위 물리 실리콘 에지 레이어.
 *   **제어 집행 (Output):** 수치 안정성 확보 및 결함 연속 누적 시 무분기 MUX를 작동시켜 진공 폭발 현상을 내부 완충 회랑 영역에 격리 포획.
 
