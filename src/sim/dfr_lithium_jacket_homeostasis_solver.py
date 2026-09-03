@@ -73,7 +73,6 @@ class DFRHomeostasisSolver:
         return q_rad / self.H_VAP
 
 
-
          def run_simulation(
         self, 
         t_max: float = 0.1, 
@@ -460,24 +459,33 @@ if __name__ == '__main__':
         target_p_steady = solver.TARGET_P_STEADY
         
         # 2. 다차원 동적 시뮬레이션 전수 스캔 플롯 구성
-        # 최악의 정체 상황(0.1), 기저 운전선(0.5), 이상적 배기(1.0)를 시각적으로 전격 비교
-        display_scenarios = [0.1, 0.5, 1.0]
-        color_map = {0.1: '#EF4444', 0.5: '#7C3AED', 1.0: '#10B981'}
+        # 📌 최종 버전 마감: 가변 Throttle 밸브 제어 변수를 도입하여 복합 배기 저항 시나리오를 시각적으로 전격 비교
+        # 1) 최악의 개도 조임 상태 (eff=0.5, valve=0.2) -> 압력 대역 상승 모사
+        # 2) 평시 기저 정상 설계선 (eff=0.5, valve=1.0) -> 목표 타겟선 정확한 안착 실증
+        # 3) 최대 완전 배기 가동선 (eff=1.0, valve=1.0) -> 초고진공 마진 확보 실증
+        display_scenarios = [
+            {'eff': 0.5, 'valve': 0.2, 'color': '#EF4444', 'width': 2.0, 'tag': 'Worst Throttle Lock'},
+            {'eff': 0.5, 'valve': 1.0, 'color': '#7C3AED', 'width': 2.8, 'tag': 'Baseline Steady-State'},
+            {'eff': 1.0, 'valve': 1.0, 'color': '#10B981', 'width': 2.0, 'tag': 'Maximum Extraction'}
+        ]
         
         # 로컬 개발자를 위한 직관적 Matplotlib 인터랙티브 윈도우 점화
-        plt.figure(figsize=(8, 4.5))
+        plt.figure(figsize=(8.5, 4.8))
         
-        for eff in display_scenarios:
-            # 단일 인스턴스 재사용 + 하이브리드 오버라이드 가동
-            df_result = solver.run_simulation(pump_efficiency_override=eff)
+        for sc in display_scenarios:
+            # 단일 인스턴스 재사용 + 하이브리드 이중 오버라이드 매개변수 파이프라인 직결
+            df_result = solver.run_simulation(
+                pump_efficiency_override=sc['eff'],
+                valve_open_ratio_override=sc['valve']
+            )
             
-            # 효율별 동적 주행 압력 프로파일 곡선 투사
+            # 효율 및 밸브 개도별 동적 주행 압력 프로파일 곡선 투사
             plt.plot(
                 df_result['Time_ms'], 
                 df_result['Pressure_Torr'], 
-                color=color_map[eff], 
-                linewidth=2.0 if eff != 0.5 else 2.8,  # 기저 운전선(0.5) 강조
-                label=f'Dynamic Vapor Pressure (eff={eff:.1f})'
+                color=sc['color'], 
+                linewidth=sc['width'], 
+                label=f"{sc['tag']} (eff={sc['eff']:.1f}, valve={sc['valve']:.1f})"
             )
         
         # 설계 임계 목표 평형 상태선 투사 (물리학적 타당성 가이드라인)
@@ -490,7 +498,7 @@ if __name__ == '__main__':
         )
         
         # 레이텍(LaTeX) 수학 도메인 서체 디자인 정착 및 레이아웃 마감
-        plt.title('DFR Vapor Jacket Homeostasis Convergence Sweep Analysis', fontsize=12, pad=12)
+        plt.title('DFR Vapor Jacket Homeostasis & Throttle Valve Convergence Analysis', fontsize=12, pad=12)
         plt.xlabel('Time (ms)', fontsize=10)
         plt.ylabel('Vapor Pressure (Torr)', fontsize=10)
         plt.yscale('log')
@@ -503,7 +511,7 @@ if __name__ == '__main__':
         plt.savefig(output_filename, dpi=300, bbox_inches='tight')
         print(f"➔ 💾 [Archive] 고해상도 시뮬레이션 플롯 파일 저장 완료: {output_filename}")
         
-        print("➔ 📊 [Matplotlib Engine] 다중 효율 프로파일 플롯 컨벌전스 렌더링 완료. GUI 윈도우를 출력합니다.")
+        print("➔ 📊 [Matplotlib Engine] 다중 효율/밸브 개도 프로파일 플롯 컨벌전스 렌더링 완료. GUI 윈도우를 출력합니다.")
         plt.show()
         
     else:
