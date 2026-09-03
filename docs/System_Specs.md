@@ -30,51 +30,41 @@
 
 ```mermaid
 graph TB
-    %% 스타일 정의
+    %% Style Definitions
     classDef ingress fill:#FF4D4D,stroke:#FF0000,stroke-width:2px,color:#FFFFFF,font-weight:bold;
     classDef egress fill:#2F55FF,stroke:#001FFF,stroke-width:2px,color:#FFFFFF,font-weight:bold;
     classDef packet fill:#FFD700,stroke:#B8860B,stroke-width:2px,color:#000000,font-weight:bold;
-    classDef shield fill:#718096,stroke:#4A5568,stroke-width:2px,color:#FFFFFF,font-weight:bold;
 
-    %% 최외곽 계층: 실리콘 제어단 (중성자 음영 대피 구역)
-    subgraph L1 ["[Layer 1] GaN / SiC Radiation-Hardened Branchless Magnetics Execution Zone (50Hz Fix Clock)"]
+    %% Outermost Stratum: Electromagnetic Control Zone
+    subgraph S1 ["[Physical Shell 1] GaN / SiC Radiation-Hardened Branchless Magnetics Device Zone"]
         direction TB
         
-        %% 중성자 흡수 차폐 장벽 (추가)
-        subgraph L_Shield ["[Topological Shield] Polyethylene-Boron Neutron Absorbent Wall"]
+        %% Intermediate Stratum: Thermal Energy Recovery Absorption Core
+        subgraph S2 ["[Physical Shell 2] GlidCop (Cu-Al) Hyper-Speed Dispersion-Strengthened Heat Sink Array"]
             direction TB
             
-            %% 중간 계층: 열 회수 냉각판
-            subgraph L2 ["[Layer 2] GlidCop (Cu-Al) Hyper-Speed Dispersion-Strengthened Heat Sink Array (520°C Limit)"]
-                direction TB
+            %% Innermost Stratum: Lithium Insulating Shielding Blanket
+            subgraph S3 ["[Physical Shell 3] 1D Vapor Tunnel + Dual-Velocity Liquid Li-Pb Blanket"]
+                direction LR
                 
-                %% 신규 계층: 이중 유속 리튬-납 액체 블랭킷
-                subgraph L3_Jacket ["[Layer 3] Fluidic Li-Pb Jacket System (MHD Slip Drive: 3~5 m/s)"]
-                    direction LR
-                    
-                    %% 최중심축: 1D 이산 터널 (기화 리튬 증기압 가득 참)
-                    subgraph L4_Core ["[Layer 4] 1D Vapor Tunnel (Steady-State Li-Vapor: 5.17e-5 Torr / Plasma v: 10 m/s)"]
-                        direction LR
-                        Ingress[DoD Inkjet Ingress] --> P1["Packet N"] -- "7m/s Slipping & Gas Cushion" --> P2["Packet N+1"] --> P3["Packet N+2"]
-                    end
-                end
+                %% Core Axial: 1D Linear Track Corridor Pipeline
+                Ingress[Fuel Injector Node] --> P1["▬"] --> P2["▬"] --> P3["▬"] --> P4["▬"] --> Packets[Discrete Packets] --> Egress[Circulation Feedback Hub]
             end
         end
     end
 
-    %% 순환 폐루프(Closed-Loop) 시각화 인터록
-    P3 -- "Forward Neutron & Re-breeding Loop" --> Egress[Egress / Recovery Hub]
-    Egress -- "Tritium Online Feedback Feed" --> Ingress
+    %% 폐쇄형 순환 인터록: 끝부분이 다시 입구(연료 주입단)로 무한 주행 (추가)
+    Egress ----> Ingress
 
     class Ingress ingress;
     class Egress egress;
-    class P1,P2,P3 packet;
+    class P1,P2,P3,P4,Packets packet;
     
-    style L1 fill:#241A3A,stroke:#7C3AED,stroke-width:3px,stroke-dasharray: 5 5,color:#FFFFFF;
-    style L_Shield fill:#2D3748,stroke:#4A5568,stroke-width:2px,color:#FFFFFF;
-    style L2 fill:#2C1B10,stroke:#D97706,stroke-width:2px,color:#FFFFFF;
-    style L3_Jacket fill:#0F2416,stroke:#1E7E34,stroke-width:2px,color:#FFFFFF;
-    style L4_Core fill:#0D1117,stroke:#3182CE,stroke-width:2px,color:#FFFFFF;
+    style S1 fill:#241A3A,stroke:#7C3AED,stroke-width:3px,stroke-dasharray: 5 5,color:#FFFFFF;
+    style S2 fill:#2C1B10,stroke:#D97706,stroke-width:2px,color:#FFFFFF;
+    style S3 fill:#0F2416,stroke:#1E7E34,stroke-width:2px,color:#FFFFFF;
+
+
 
 ```
 
