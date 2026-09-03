@@ -92,30 +92,42 @@ graph TB
 ---
 
 #### Level 4 (Macro Cognitive Inference & Load Following): Homeostasis Kernel Tower
-* **구조적 배치 (Structural Positioning):** 실시간 자석 주행 및 가속 파이프라인(Hot Path)과 물리적·시간적으로 완벽히 격리되어, 전역 텔레메트리 데이터를 기반으로 장기적 안전성과 출력 효율을 조율하는 하향식 지능형 사령탑입니다.
-* **매크로 추론 및 부하 추종 (Macro Inference & Load Following):** 배관 평균 타겟 온도(500°C 내외)와 외부 전력망(Grid) 수요 곡선을 2.0초 주기로 거시적 패시브 스캔하여, 입구 잉크젯 분사 주파수 다이얼을 5 kHz ~ 15 kHz 사이로 결정론적으로 가변 조절함으로써 플랜트 전체 출력을 유기적으로 조율합니다.
-* **지터 침투 차단 (Jitter Disruption Defense):** 무거운 거시 데이터 연산 및 상위 추론 로직을 2.0초 백그라운드 태스크로 완전히 분리함으로써, 파이썬 기동 및 연산 시 발생할 수 있는 미세 지터(Jitter)가 하부 실시간 구동단으로 전파되는 것을 원천 차단합니다.
-* **자가 안정화 유도 (Self-Regulating Homeostasis):** 배관 내부의 과열 징후(520°C 초과 등)를 포착하는 즉시, 시스템 급정거 없이 연료 주입 주파수를 5 kHz 최저선으로 변조하여 정비 중단 없는 단위 면적당 열 부하 급감 및 자가 냉각 마진을 확보합니다.
+
+* **구조적 배치 (Structural Positioning):** 실시간 자석 주행 및 초고속 가속 파이프라인(Hot Path)과 물리적·시간적으로 완벽히 격리되어, 전역 텔레메트리 데이터를 기반으로 장기적 안전성과 출력 효율을 조율하는 하향식 지능형 사령탑입니다.
+* **매크로 추론 및 부하 추종 (Macro Inference & Load Following):** 배관 평균 타겟 온도(500°C 내외)와 외부 전력망(Grid) 수요 곡선을 2.0초 주기로 거시적 패시브 스캔합니다. 입구 잉크젯 분사 주파수 다이얼을 5 kHz ~ 15 kHz 사이에서 결정론적으로 가변 조절함으로써 플랜트 전체 출력을 유기적으로 조율합니다.
+* **진공-열역학 복합 추론 가드레일 (Vacuum-Thermodynamic Hybrid Inference):** `Physics_note.md` [4-2] 스펙을 엄격히 준수합니다. Level 3로부터 오프로드된 전 구간 16개 자석 섹터의 가변 Throttle 밸브 평균 개도율($\xi_{\text{avg}}$)을 실시간 감시하여, 진공 흡입 컨덕턴스 면적이 80% 미만($\xi_{\text{avg}} < 0.8$)으로 떨어지는 정체 병목을 포착합니다.
+* **자가 안정화 영역 집행 (Homeostasis Lock):** 배관 내부의 과열 징후(520°C 초과) 또는 상기 진공 병목 포착 즉시, 시스템의 갑작스러운 셧다운(Shut-down) 없이 연료 주입 주파수를 5 kHz 최소선(`HZ_MIN`)으로 즉각 강하합니다. 이를 통해 단위 면적당 열/진공 부하의 급감을 유도하고, 배관 파손과 압력 폭발을 선제 차단하는 확정형 자가 복구 영역을 집행합니다.
+* **지터 침투 차단 (Jitter Disruption Defense):** 이와 같은 무거운 거시 데이터 연산 및 상위 추론 로직을 2.0초 백그라운드 태스크로 완전히 분리함으로써, 파이썬(Python) 런타임 기동 및 가비지 컬렉션 연산 시 발생할 수 있는 미세 지터(Jitter)가 하부 실시간 베어메탈 구동단으로 전파되는 것을 원천 차단합니다.
+
 
 #### Level 3 (Global Orchestration): Asynchronous Post-Flush Recov-Orchestrator
-* **구조적 배치 (Structural Positioning):** 말단 실리콘 에지(Level 1)와 가속 브릿지(Level 2) 위에서 거시적인 예외 상태 제어와 배관 물리 복구 시퀀스를 집행하는 비동기 소프트웨어 중추입니다.
-* **비동기 텔레메트리 폴링 (Asynchronous Telemetry Polling):** 네이티브 `asyncio` 비블로킹 이벤트 루프를 활용하여, 하부 실리콘 와이어가 독자적으로 사출한 절대 단선 및 사망 토큰(-99.0f)을 실시간으로 캐치하는 무병목 인터럽트 수동 리스닝 메커니즘을 구동합니다.
-* **격자 수술 (Lattice Surgery):** 특정 섹터 고장 포착 즉시 가상 전력망 격자 활성 마스크(`active_lattice_mask`)를 즉각 `False`로 스왑하고 격리 궤도로 라우팅 동기화를 완수함으로써, 하나로 이어진 1D 선형 트랙 파이프 내의 전압 강하 및 그리드 위상 교란을 방지합니다.
-* **사후 소산 및 초고진공 정비 (Post-Flush Recovery):** 불량 플라즈마 패킷과 잔류 찌꺼기가 비상 우회 챔버로 관성 사출되기를 비동기 대기한 후, 흡입 진공 펌프를 조율하여 기저 배관 진공도를 핵융합로 규격인 `10⁻⁵ Torr` 초고진공 및 500°C 평형 안정 상태로 강제 복구합니다.
-* **하향식 물리 재점화 (Downstream Re-ignition Binding):** 16개 독립 자석 섹터의 실제 PCIe BAR / 공유 메모리 주소 매핑 테이블을 기반으로, Level 2 C++ 브릿지를 역방향으로 직접 가로채 하부 실리콘 레지스터 내부의 비상 록인 플래그와 `fail_counter`를 원자적(Atomic)으로 `0` 포맷팅하여 중단 없는 평시 50Hz 파도타기 주행 궤도 복귀를 완료합니다.
+
+* **구조적 배치 (Structural Positioning):** 말단 실리콘 에지(Level 1)와 하드웨어 브릿지(Level 2) 위에서 거시적인 예외 상태 제어와 배관 물리 복구 시퀀스를 집행하는 비동기 소프트웨어 중추입니다.
+* **비동기 텔레메트리 폴링 (Asynchronous Telemetry Polling):** 네이티브 `asyncio` 비블로킹 이벤트 루프를 활용하여, 하부 실리콘 와이어가 독자적으로 사출한 절대 단선 및 결함 토큰(`-99.0f`)을 실시간으로 감지하는 무병목 인터럽트 수동 리스닝 메커니즘을 구동합니다.
+* **격자 수술 (Lattice Surgery):** 특정 섹터의 결함 포착 즉시 가상 전력망 격자 활성 마스크(`active_lattice_mask`)를 `False`로 스왑하고 격리 궤도로 라우팅 동기화를 완수합니다. 이를 통해 하나로 이어진 1D 선형 트랙 파이프 내의 전압 강하 및 그리드 위상 교란을 방지합니다.
+* **C++ 연동 비상 대기 시간 동적 계산 (Asynchronous Decay Waiting):** 비상 셧다운 프로토콜 가동 시, Level 2 C++ 확장 모듈의 무분기 수식 엔진과 결속합니다. 현재 밸브 개도율 상태에 동기화된 가변 지수 감쇄 속도(Hz)를 역산하여, 유체역학적 인과율(CFL 조건)을 맞추기 위해 필요한 최소 안전 대기 시간인 `$t_{\text{wait}} = \frac{5}{\text{decay\_rate}}$` 수식을 마이크로초 오차 없이 스스로 추정하고 대기 버퍼를 집행합니다.
+* **사후 소산 및 초고진공 정비 (Post-Flush Recovery):** 불량 플라즈마 패킷과 잔류 찌꺼기가 비상 우회 챔버로 관성 사출되기를 비동기 대기한 후, 흡입 진공 펌프를 조율하여 기저 배관 진공도를 핵융합로 규격인 $10^{-5}\text{ Torr}$ 초고진공 및 500°C 평형 안정 상태로 강제 복구합니다.
+* **원자적 폐루프 제어 및 재점화 복구 (Downstream Re-ignition Binding):** 16개 독립 자석 섹터의 실제 PCIe BAR 및 공유 메모리 물리 주소 매핑 테이블을 기반으로, Level 2 C++ 브릿지를 구동합니다. 고장 지점의 복구 사출과 동시에 비상 차단 상태(`0.0`)로 잠겨 있던 가변 Throttle 밸브 레지스터를 평시 기저선 사양인 `1.0f`(100% 완전 개방) 상태로 원자적 동시 이완 복구를 단행합니다. 결함 이력(`failed_history_cnt`)이 존재하더라도, 하류 모든 연쇄 섹터 상태가 `"STEADY"` 기저선으로 완벽히 복구 수렴됨을 최종 판정한 후 재점화 무결성을 안정적으로 마감합니다.
+
 
 
 
 #### Level 2 (Hardware-Software Bridge): C++ Accelerator Bridge Conduit
+
 * **구조적 배치 (Structural Positioning):** 최하위 하드웨어 실리콘 주변부(Level 1)와 상위 오케스트레이션 레이어(Level 3)를 통신 지연 시간 제로(0)로 연결하는 순수 임베디드 데이터 도관(Conduit)입니다.
 * **0ns 제로카피 레지스터 가로채기 (Zero-Copy Register Interception):** Pybind11 캡슐 라이프사이클 펜스(`py::capsule`) 및 NumPy Direct Pointer View 공유 메커니즘을 이용해 PCIe BAR / 공유 메모리 영역의 실리콘 물리 주소를 메모리 딥카피 없이 32바이트 Aligned 마스터 구조체 레이아웃으로 즉각 재해석하여 인입 데이터 오버헤드를 0ns로 무력화합니다.
 * **지터 제로 메모리 안전 펜스 (Zero-Jitter Lifecycle Protection):** 캡슐 내부 람다 소거자를 고의로 비워둠으로써 파이썬 가비지 컬렉터(GC)의 임의적인 하드웨어 레지스터 주소 반환 개입을 원천 차단하고, 메모리 할당 제로 지터(Zero-jitter) 베어메탈 수명을 보장합니다.
-* **양방향 제어 고속 바이패스 (Bi-Directional High-Speed Bypass):** `fluid-mesh-hpc` 청사진 및 C++20 `[[unlikely]]` 예외 가드로 보호되는 상향식 텔레메트리 뷰뿐만 아니라, 상위의 복구 트리거 판단 시 하부 실리콘 레지스터의 비상 록인 플래그와 카운터를 원자적으로 포맷팅하는 하향식 직접 오버라이트 주입 채널(`trigger_hardware_reignition_conduit`)을 완성합니다.
+* **0ns 무분기 반응 속도 산출 (Zero-Branch Response Ejection):** `Physics_note.md` [4-2] 스펙을 준수합니다. 상위 제어단이 밸브를 조이거나 차단했을 때 발생하는 나노초(ns) 단위의 연산 지연을 방지하기 위해, 나눗셈 연산을 전면 배제하고 사전 계산된 체적의 역수 고속 곱셈(`INV_CONDUIT_VOLUME`) 1클록 파이프라인을 구동합니다. 도관 내부의 실질적인 진공 소산 속도(압력 감쇄 지연 시간)를 단 10ns(1클록) 이내에 처리하며, 분기 예측 지연이 없는 무분기 MUX 구조의 `calculate_conduit_decay_rate_0ns` 함수를 통해 상향 사출합니다.
+* **양방향 제어 고속 바이패스 (Bi-Directional High-Speed Bypass):** `fluid-mesh-hpc` 청사진 및 C++20 `[[unlikely]]` 예외 가드로 보호되는 상향식 텔레메트리 뷰를 확립합니다. 이에 더해 상위의 복구 트리거 판단 시 컴파일러의 명령어 최적화 생략을 방어하는 `volatile` 하드웨어 배리어를 적용하고, 하부 실리콘 레지스터의 비상 록인 플래그와 카운터를 원자적으로 초기화하는 하향식 직접 오버라이트 주입 채널(`trigger_hardware_reignition_conduit`)을 완성합니다.
 
 
 #### Level 1 (Hardware Silicon Edge): Sub-Nanosecond Silicon Edge Kernel
-* **구조적 배치 (Structural Positioning):** 스트리밍 플라즈마 패킷과 직접 인터페이스하며 GaN/SiC 전력 인버터 및 코일단에 직결된 최하위 물리 실리콘 에지 레이어입니다.
-* **연산 제거 및 선제적 구동 (Arithmetic Elimination & Anticipatory Actuation):** 실리콘 설계 레벨에서 부동 소수점 하드웨어 나눗셈 블록을 완전히 숙청하고, 64요소 분산 RAM 역수 LUT 기반 고속 곱셈으로 변환하여 실시간 이산 플라즈마 세그먼트에 대한 sub-10ns 하드와이어드 자성 선제 진행파를 형성합니다.
-* **실시간 노이즈 제거 및 수치 안정성 (DSP Filtering & Mathematical Safety Wall):** 파데 근사(Padé Notch Filter) 기법을 조건문 없는 순수 사칙연산 파이프라인으로 구현하여 50Hz 그리드 전력 노이즈를 실시간 감쇄하고, 장시간 필터 구동 시 소수점 연산 오차로 유발되는 발산을 막기 위해 언제나 양수 플러스를 보장하는 조셉 폼(Joseph Form) 공분산 방어벽 변수(`p00_shield`)를 내장합니다.
-* **하드웨어 레벨 페일세이프 MUX (Hardware-Level Failsafe & Branchless MUX):** 상류 결함 토큰(`-99.0f`) 및 IEEE 754 NaN 조건, 백만 임계값 오버플로우를 무분기 연산으로 병렬 검사하여, 5회 연속 발생 시 비상 상태로 전체 록인합니다. `__builtin_memcpy` 기반 무분기 MUX(`uni_branchless_select`)를 통해 핀 마킹 설정에 따라 일반 노드 1.5f 가속 추진파 가동 혹은 챔버 노드 직진 차단 및 대각 소용돌이 흡입을 0ns 와이어 사출 타이밍으로 집행합니다.
+
+* **구조적 배치 (Structural Positioning):** 스트리밍 플라즈마 패킷과 인터페이스하는 최하위 물리 실리콘 에지 레이어입니다.
+* **나눗셈 배제 및 자기장 진행파 동기화 (Arithmetic Elimination & Wavefront Shaping):** 부동 소수점 나눗셈 블록을 배제하고 64요소 역수 LUT 기반 고속 곱셈으로 치환하며, `Physics_note.md` [4-3]에 따른 자성 선제 진행파를 형성합니다.
+* **실시간 노이즈 제거 및 수치 안정성 (DSP Filtering & Mathematical Safety Wall):** 파데 근사(Padé Notch Filter)를 통해 50Hz 그리드 전력 노이즈를 감쇄하고 조셉 폼(Joseph Form) 공분산 방어벽(`p00_shield`)을 내장합니다.
+* **위치 기반 다중 포트 제어 (Location-Based Multi-Port Control):** 세라믹 핀(`is_chamber_node`)으로 선로를 식별하고, Throttle 밸브 레지스터(`valve_open_ratio`)를 제어합니다.
+* **하드웨어 페일세이프 및 진공 폭발 격리 (Hardware Failsafe & Homeostasis Flush):** 결함 토큰 및 오버플로우를 병렬 검사하여 록인하며, MUX(`uni_branchless_select`)를 집행합니다.
+  * **일반 노드:** 50Hz 사인파를 차단하고 가속 추진파로 플러시하며, 밸브를 `0.0`으로 폐색합니다.
+  * **챔버 분기 노드 (Y자 트랙):** 진행 방향을 차단하고 챔버 통로로 관성 사출합니다.
 
