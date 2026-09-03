@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DFR V3 플랜트 자율 항상성 통합 관제 대시보드 (HMI)</title>
+    <title>DFR V3 플랜트 실시간 자가 안정화 통합 관제 대시보드 (HMI)</title>
     <style>
         :root {
             --bg-color: #0d1117;
@@ -97,9 +97,9 @@
 </head>
 <body>
 
-    <header>
+       <header>
         <div>
-            <h1>DFR V3 항상성 자율 제어 플랜트 통합 관제소 (HMI)</h1>
+            <h1>DFR V3 자가 안정화 통합 관제소 (HMI)</h1>
             <p style="color: #8b949e; font-size: 14px; margin-top: 4px;">Layer 1 ~ Layer 4 양방향 텔레메트리 실시간 전산 스캔 피드</p>
         </div>
         <div class="badge" id="system-clock-display">SYS_TICK: 00000 ms</div>
@@ -108,7 +108,7 @@
     <div class="grid-container">
         <!-- 좌측 제어 평면: 전역 거시 인지 텔레메트리 판넬 -->
         <div class="panel">
-            <h2>🧠 거시 인지 상태 평면 (Level 4/3 Telemetry)</h2>
+            <h2>🧠 거시 인지 상태 평면 (Layer 4/3 Telemetry)</h2>
             <div class="telemetry-row">
                 <span>외부 전력망 수요 계수 (Grid Demand)</span>
                 <span class="value-highlight" id="lbl-grid-demand">100.0 %</span>
@@ -122,7 +122,7 @@
                 <span class="value-highlight" id="lbl-plant-temp">500.00 °C</span>
             </div>
             <div class="telemetry-row">
-                <span>진공 도관 실질 배기 면적 마진 (&xi;_avg)</span>
+                <span>진공 흡입 컨덕턴스 면적 마진 (&xi;_avg)</span>
                 <span class="value-highlight" id="lbl-avg-valve" style="color: #7eea8e;">100.00 %</span>
             </div>
             <div class="telemetry-row">
@@ -156,7 +156,7 @@
         </div>
     </div>
 
-    <script>
+        <script>
         // 📌 디지털 트윈 환경 데이터셋 1:1 결속 매핑
         const numSectors = 16;
         let clockTick = 0;
@@ -180,7 +180,7 @@
             gridEl.appendChild(card);
         }
 
-        // SVG 상의 16개 자석 노드 좌표 원형 기하학적 매핑 생성
+        // SVG 상의 16개 자석 노드 좌표 원형 기하학적 매핑 생성 (W3C SVG 표준 규격 준수)
         const nodesData = [];
         for (let s = 0; s < numSectors; s++) {
             const angle = (s * 22.5 * Math.PI) / 180;
@@ -215,14 +215,13 @@
                 for (let s = 6; s < numSectors; s++) {
                     if (sectorStates[s] !== "EMERGENCY") {
                         sectorStates[s] = "FLUSHING";
-                        valveRatios[s] = 0.0; // 밸브 완전 폐색 인터록
+                        valveRatios[s] = 0.0; // 밸브 완전 폐색 격리 가드레일 작동
                         fluxOutputs[s] = s === 15 ? 0.0 : 1.5; // 일반 노드 1.5f 가속 추진파, 15번 격벽화
                     }
                 }
                 gridDemand = 0.5; // 안정 제어 진입을 위한 외부 차단 부하 낙하
             }
-
-            // L3 오케스트레이터 5/decay_rate 대기 후 45ms 시점에 원자적 리셋 및 밸브 이완(1.0) 복구 대성공 실증
+            // Layer 3 오케스트레이터 5/decay_rate 대기 후 45ms 시점에 원자적 리셋 및 밸브 이완(1.0) 복구 실증
             if (clockTick === 45) {
                 for (let s = 6; s < numSectors; s++) {
                     sectorStates[s] = "CLEARED";
@@ -232,11 +231,8 @@
                 plantTemp = 500.1;
                 gridDemand = 0.8;
             }
-            if (clockTick === 70) {
-                for (let s = 0; s < numSectors; s++) { sectorStates[s] = "STEADY"; fluxOutputs[s] = s === 15 ? 0.0 : 1.0; }
-                gridDemand = 1.0;
-            }
-            // [앞선 70ms 기저 발전 스트림 정상 복귀 분기문에서 연속 이어짐]
+            
+            // 70ms 시점에 기저 발전 스트림 평시 주행 궤도로 정상 복구 수렴
             if (clockTick === 70) {
                 for (let s = 0; s < numSectors; s++) { 
                     sectorStates[s] = "STEADY"; 
@@ -249,10 +245,10 @@
             const totalValve = valveRatios.reduce((a, b) => a + b, 0);
             const avgValveOpen = (totalValve / numSectors) * 100;
 
-            // Level 4 복합 추론 다이얼링 규칙 엔진 실리콘 매핑 모사
+            // Layer 4 복합 추론 다이얼링 규칙 엔진 실리콘 매핑 모사
             let targetHz = 5000.0 + (10000.0 * gridDemand);
             if (plantTemp > 520.0 || avgValveOpen < 80.0) {
-                targetHz = 5000.0; // 진공 면적 마진 80% 미만 병목 포착 즉시 최소 냉각 주파수 고착
+                targetHz = 5000.0; // 진공 흡입 컨덕턴스 면적 80% 미만 병목 포착 즉시 5 kHz 최소선 제어 집행 (Homeostasis Lock)
             }
 
             // 2. 통제실 HMI 텍스트 필드 0ms 고속 업데이트
@@ -300,3 +296,4 @@
     </script>
 </body>
 </html>
+
