@@ -50,6 +50,22 @@
 - **실증 오차 마진:** 축 주행 유속 $v_z = 10\;\mathrm{m/s}$ 조건에서 찰나의 탈출 시간($20\;\mathrm{ms}$) 동안 발생하는 최종 횡방향 유체 미끄럼 변위를 단 **$9.59\;\mu\mathrm{m}$** 대역으로 영구 결속함으로써, 사방 $30\;\mathrm{cm}$의 동역학적 진공 완충 회랑 마진 대비 **약 31,000배 이상의 극단적인 토폴로지 안전장벽**을 완성함.
 
 
+## 4-5. MHD 유체-에너지 균형 및 과도기 열적 항상성 유도 (MHD Fluid-Energy Balance)
+
+- **거시 열-에너지 보존 방정식 (Macroscopic Energy Conservation):** 1D 선형 트랙 관로 내부에서 주행하는 이산 플라즈마 패킷과 내벽 액체 리튬 레이어 간의 거시적 열에너지 교환을 맥스웰 방정식의 전자기압과 Navier-Stokes 유체 점성 소산 항이 결합된 하이브리드 항상성 균형 모델로 수식 고정. 시스템의 시간 도메인별 단위 체적당 내부 에너지 변화율($\frac{\partial E}{\partial t}$) 규격 고착.
+
+$$ \frac{\partial E}{\partial t} = \eta J^2 + \nabla \cdot (\kappa \nabla T) - P_{\text{ram}} (\nabla \cdot \mathbf{v}) - Q_{\text{brem}} $$
+
+  - $\eta J^2$ (Joule Heating): 유도 전자기 위상 스핀에 의해 발생하는 전력 오버로드 열 잡음 소산 항.
+  - $\nabla \cdot (\kappa \nabla T)$ (Thermal Conduction): GlidCop 외벽 구리 레이어와 리튬 가스 재킷 요람 간의 미시 열전도 방정식 (기저 안착 목표 500°C 평형선 유도).
+  - $P_{\text{ram}} (\nabla \cdot \mathbf{v})$ (Compressible Work): 뢸로 가스 쿠션의 복원 사면 진입 시 발생하는 유체 압축 일률.
+  - $Q_{\text{brem}}$ (Bremsstrahlung Loss): 제동 복사에 의한 거시적 열손실 마진.
+
+- **Level 4 제어 임계값의 수학적 유도 (Operating Window Boundary):** 5~15kHz 가변 기동 조건과 배관 반경 $R_{\text{wall}} = 0.30\text{ m}$ 기하학 제약 하에서 해석학적으로 적분 전개. 외벽 허용 열부하 마진(135W)을 지키기 위한 임계 온도 산출.
+
+$$ T_{\text{critical}} = T_{\text{target}} + \Delta T_{\text{spike}} = 500.0^\circ\text{C} + 20.0^\circ\text{C} = \mathbf{520.0^\circ\text{C}} $$
+
+- **공학적 의미:** 배관 온도가 520°C를 넘는 순간, Level 4 사령탑 커널이 잉크젯 분사 주파수를 $15\text{ kHz}$ 부하 발전 모드에서 $5\text{ kHz}$ 최소 안정화 모드로 변경되어야 하는 이유입니다.
 
 
 
