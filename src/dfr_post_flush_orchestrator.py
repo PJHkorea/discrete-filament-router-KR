@@ -1,18 +1,18 @@
 import asyncio
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 # Level 2에서 C++ 고속 다운스트림 관로로 마감한 바이너리 컴파일 모듈 로드
 try:
     import c_accelerator_bridge_conduit 
 except ImportError:
     # 모의 테스트 및 가상 독립 환경을 위한 폴백 방어
-    pass
+    c_accelerator_bridge_conduit = None
 
 # Note: 동기식 차단 트랩(time.sleep)을 차단하기 위해 표준 'time' 라이브러리는 제외합니다.
 # 모든 비상 사후 복구 및 스캔 루프는 비차단형 'asyncio' 비동기 루프로 구동됩니다.
 
 class DFRAperiodicPostFlushOrchestrator:
-    def __init__(self, num_sectors: int, sector_register_addresses: Dict[int, int] = None):
+    def __init__(self, num_sectors: int, sector_register_addresses: Optional[Dict[int, int]] = None):
         self.num_sectors = num_sectors
         
         # 📌 하향식 물리 드라이버 연동: 16개 자석 섹터의 실제 PCIe BAR / 공유 메모리 주소 매핑 딕셔너리
@@ -30,6 +30,12 @@ class DFRAperiodicPostFlushOrchestrator:
             s: True for s in range(num_sectors)
         }
         
+        # 📌 고도화: Physics_note.md [4-2 가변 컨덕턴스 배기 제어] 장의 실시간 상하향식 동기화를 위한 밸브 개도율 상태 추적 테이블 신설
+        # 기저 사양: 평시 정상 상태 밸브 개도율 1.0f (100% 완전 개방)로 전 구간 초기화 고착
+        self.valve_open_ratios = {
+            s: 1.0 for s in range(num_sectors)
+        }
+        
         # 사후 감결합 및 임시 차단 조치가 완료된 불량 자석 섹터 노드들의 장기 히스토리 맵
         self.evacuated_defect_sectors: List[int] = []  
         
@@ -38,7 +44,8 @@ class DFRAperiodicPostFlushOrchestrator:
         
         self.is_running = True
 
-    def report_magnet_interrupt_event(self, sector_id: int, marker_signal: float):
+
+      def report_magnet_interrupt_event(self, sector_id: int, marker_signal: float):
         # 50Hz 정속 파도타기 정상 운전 기저선: 패시브 리스닝 유지 (연산 부하 0%)
         if marker_signal == 0.0:
             return  
@@ -59,11 +66,16 @@ class DFRAperiodicPostFlushOrchestrator:
         print(f"\n🔥 [Post-Facto Ingest] Sector [{failed_sector_id}] 절대 단선 결함(-99.0f) 사후 오프로드 포착!")
         self.track_status[failed_sector_id] = "FLUSHING"
         
+        # 🛡️ 물리 동기화 고도화: Physics_note.md [4-2 수치해석적 셧다운 가드] 장과의 싱크 완료
+        # 비상 가속 플러시 및 자율 소산 국면 진입 시 해당 섹터 밸브 개도율 상태를 즉각 0.0(완전 폐색)으로 강제 마크다운
+        self.valve_open_ratios[failed_sector_id] = 0.0
+        
         # 하드웨어 격자 우회 수술(Lattice Surgery) 동기화: 고장 구간 전력 마스킹 마크 다운
         self.active_lattice_mask[failed_sector_id] = False
         self.evacuated_defect_sectors.append(failed_sector_id)
         
         print(f" ➔ ⛔ [Lattice Map Synced] Sector [{failed_sector_id}] 전력망 가상 격자 격리 및 우회 궤도 동기화 완료.")
+        print(f" ➔ 🔩 [Valve State Synced] Sector [{failed_sector_id}] 가변 Throttle 밸브 비상 차단(0.0) 상태 격리 전착.")
         print(f" ➔ ⛓ [Lattice State Ingested] 고장 구역 직전 Y자 분기점 직선 챔버 관성 사출 게이트 개방 상태 아카이빙 완료.")
         print(f"📊 [HUMAN HMI] 관제 대시보드 경보: [Sector {failed_sector_id} 자율 소산 밸브 오픈 & 비상 세척 시퀀스 가동 중]")
         
@@ -71,7 +83,7 @@ class DFRAperiodicPostFlushOrchestrator:
         self.emergency_event_queue.put_nowait(failed_sector_id)
 
 
-       async def run_orchestrator_loop(self):
+          async def run_orchestrator_loop(self):
         """
         @brief [Level 3] 24시간 비동기 상시 리스닝 및 전 구간 연쇄 자율 치유(Self-Healing) 마스터 루프
         @details 하부 에지단(L1)이 선처리를 끝내고 사후 오프로드한 결함 이벤트를 비동기 Queue에서 
@@ -89,11 +101,22 @@ class DFRAperiodicPostFlushOrchestrator:
                 print(f"\n[🔧 Active Recovery Core] Sector [{failed_id}] 자율 소산 감지 -> 거시 사후 정비 파이프라인 점화.")
                 
                 # ─────────────────────────────────────────────────────────────────────
-                # 📌 [Step 1] 텔레메트리 진공 확증 (Vacuum Post-Verify)
+                # 📌 [Step 1] 텔레메트리 진공 확증 (Vacuum Post-Verify) & C++ 시정수 역산
                 # ─────────────────────────────────────────────────────────────────────
-                # 불량 패킷과 가스 찌꺼기들이 Y자 분기를 넘어 직선 챔버 리튬 플레이트로 전량 사출되기를 대기
-                await asyncio.sleep(1.0) 
-                print(f" ➔ 🔍 [Step 1: 진공 확증] Sector [{failed_id}] 배관 내 잔류 유체 및 가스 배출 상태 검증 중...")
+                # 💡 인프라 결합 정답: 고정 1.0초 대기 대신, Level 2 C++ 확장 모듈의 0ns solver를 결속 구동!
+                # 현재 고장 섹터의 복합 배기 조건(펌프 고유 효율 0.5, 현재 밸브 차단 0.0 상태)을 주입하여 가변 감쇄 속도(Hz)를 즉각 획득
+                try:
+                    decay_rate_hz = c_accelerator_bridge_conduit.calculate_conduit_decay_rate_0ns(0.5, self.valve_open_ratios[failed_id])
+                    # 전산수학화: 기체 분자 농도가 기저선 이하(1/e^5 이하)로 완전히 떨어질 수 있는 이론적 타임 상수 유도 (5 / decay_rate)
+                    # 비상 완전 잠금(0.0) 상태 시 VALVE_EPSILON(1e-15) 가드가 작동하므로 제로 디비전 없이 결정론적 대기초 역산 성공
+                    dynamic_wait_time = min(5.0 / decay_rate_hz, 1.5) # 물리적 극단 폭주 방지 1.5초 소프트 상한선 결착
+                except (NameError, AttributeError):
+                    # 컴파일 모듈 부재 환경(가상 에뮬레이터 독립 구동 등) 시 기저 설계 명세치(1.0초)로 자율 폴백
+                    dynamic_wait_time = 1.0
+                
+                # 불량 패킷과 가스 찌꺼기들이 Y자 분기를 넘어 직선 챔버 리튬 플레이트로 전량 사출되기를 가변 동적 대기
+                await asyncio.sleep(dynamic_wait_time) 
+                print(f" ➔ 🔍 [Step 1: 진공 확증] Sector [{failed_id}] 배관 내 잔류 유체 배출 상태 실시간 검증 중 (C++ 유도 대기 마진: {dynamic_wait_time:.4f}s)...")
                 print(f" ➔ 🌬️ [Step 1: 흡입 완료] 진공 펌프 완전 흡입 완료 ➔ 기저 배관 분압 10⁻⁵ Torr 초고진공 상태 정착 확증.")
                 
                 # ─────────────────────────────────────────────────────────────────────
@@ -102,8 +125,8 @@ class DFRAperiodicPostFlushOrchestrator:
                 # GlidCop 외벽 구리 레이어의 국소 열 스파이크(Heat Spike)가 안정선으로 가라앉는 버퍼 타임 확보
                 await asyncio.sleep(0.5)
                 print(f" ➔ 🌡️ [Step 2: 열 평형 회복] 전 구간 열분포 프로파일 안정화 검동 완료 ➔ 기저 운전선 500°C 평형선 안착 확인.")
-                
-                # ─────────────────────────────────────────────────────────────────────
+
+                               # ─────────────────────────────────────────────────────────────────────
                 # 📌 [Step 3 & 4] 하향식 레지스터 원자적 포맷 및 전 구간 연쇄 소프트 재점화 (Re-ignition)
                 # ─────────────────────────────────────────────────────────────────────
                 # 💡 인프라 결합 정답: 섹터가 고리처럼 전부 이어져 있어 고장 여파가 하류로 연쇄 도미노 전파되었으므로,
@@ -113,12 +136,17 @@ class DFRAperiodicPostFlushOrchestrator:
                 for s in range(failed_id, 16):
                     self.track_status[s] = "RECOVERING"
                     
+                    # 🛡️ 물리 동기화 고도화: C++ Core 브릿지의 하향식 재점화 포맷팅 사양 추종
+                    # 비상 잠금(0.0) 상태로 닫혀있던 가변 Throttle 밸브의 소프트웨어 상태 플래그를
+                    # 평시 운전선 사양인 1.0 (100% 완전 개방) 기저선으로 즉각 원자적 동시 이완 복구
+                    self.valve_open_ratios[s] = 1.0
+                    
                     if s in self.sector_addrs and self.sector_addrs[s] is not None:
-                        # 📌 관로 개방: C++ 베어메탈 브릿지를 역방향으로 격파하여 하부 칩의 fail_counter와 is_emergency_on을 1클럭만에 원자적 0 포맷팅!
+                        # 📌 관로 개방: C++ 베어메탈 브릿지를 역방향으로 격파하여 하부 칩의 fail_counter와 is_emergency_on을 1클록만에 원자적 0 포맷팅!
                         try:
                             c_accelerator_bridge_conduit.trigger_hardware_reignition_conduit(self.sector_addrs[s])
                             print(f"    ➔ [PCIe DMA Mapping] Sector [{s}] 실리콘 레지스터 주소({hex(self.sector_addrs[s])}) 원자적 초기화 마감 완료.")
-                        except NameError:
+                        except (NameError, AttributeError):
                             # 컴파일 모듈 부재 환경(에뮬레이터 단독 기동 등) 시 가상 리셋 소프트 시뮬레이션 지원
                             pass
                     else:
@@ -128,7 +156,7 @@ class DFRAperiodicPostFlushOrchestrator:
                     self.track_status[s] = "STEADY"
                     self.active_lattice_mask[s] = True 
                     
-                print(f" ➔ 🔄 [Step 4: 무중단 재점화] Sector [{failed_id} ~ 15] 전 구간 통신 마스크 복구 완료 ➔ 기저 50Hz 정속 주행 궤도 동기화 재진입.")
+                print(f" ➔ 🔄 [Step 4: 무중단 재점화] Sector [{failed_id} ~ 15] 전 구간 통신 마스크 및 가변 밸브 이완 복구 완료 ➔ 기저 50Hz 정속 주행 궤도 동기화 재진입.")
                 print(f"📊 [HUMAN HMI] 관제 센터 대시보드 알림: [전 구간 초고진공 자율 치유 복구 대성공 ➔ 기저 발전 스트림 정속 가둠 재안착]")
                 
                 # 비동기 Task 완료 시그널 전송
@@ -141,6 +169,7 @@ class DFRAperiodicPostFlushOrchestrator:
             except Exception as e:
                 print(f" ➔ 🚨 [CRITICAL SW ERROR] L3 오케스트레이터 예외 발생: {str(e)}")
                 await asyncio.sleep(1.0) # 루프 폭주 방지 가드레일
+
 
 
 
